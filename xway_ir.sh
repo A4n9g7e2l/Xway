@@ -99,7 +99,11 @@ echo -e "${CYN}━━━━━━━━━━━━━━━━━━━━━�
 WS=$(find /var/www /usr/share/nginx /home /root -type f \( -name "*.php" -o -name "*.jsp" \) 2>/dev/null | grep -iE "[0-9]{1,4}\.(php|jsp)$|[a-z]{1,3}[0-9]{4,}\.(php|jsp)$" | head -5)
 [ -n "$WS" ] && add_finding "🔴 数字命名 PHP/JSP" "$WS" 9 "Critical" && echo -e "${RED}  [!] 可疑文件:${NC}\n${RED}$WS${NC}"
 
-WSHELL=$(grep -rE "eval\(\\\$_POST|eval\(\\\$_GET|assert\(\\\$_POST|system\(\\\$_POST|passthru\(\\\$_POST" /var/www /home /root 2>/dev/null | head -5)
+# 排除安全研究人员的资料库(POC/Templates/skills/training),这些是合法文件
+# 实际生产环境的 Webshell 都在 /var/www /usr/share/nginx /root 等路径
+WSHELL=$(grep -rE "eval\(\\\$_POST|eval\(\\\$_GET|assert\(\\\$_POST|system\(\\\$_POST|passthru\(\\\$_POST" /var/www /root 2>/dev/null \
+    | grep -viE "/(nuclei-templates|nuclei-templates-2)\.|\.hermes/skills/|/training/ctf/|/htb/|/thm/|/oscp/" \
+    | head -5)
 [ -n "$WSHELL" ] && add_finding "🔴 PHP 一句话后门" "$WSHELL" 10 "Critical" && echo -e "${RED}  [!] 一句话特征:${NC}\n${RED}$WSHELL${NC}"
 
 # ============================================================
@@ -108,7 +112,11 @@ echo -e "${CYN}━━━━━━━━━━━━━━━━━━━━━�
 HIGH_CPU=$(ps auxww 2>/dev/null | sort -k3 -nr | head -5 | awk '$3+0 > 30 {print}')
 [ -n "$HIGH_CPU" ] && add_finding "🟠 高 CPU 进程(挖矿)" "$HIGH_CPU" 8 "High" && echo -e "${YEL}  [!] 高 CPU 进程:${NC}\n${YEL}$HIGH_CPU${NC}"
 
-MINER_CFG=$(find / -type f \( -name "config.json" -o -name "*.conf" \) 2>/dev/null | xargs grep -lE "stratum|xmrig|pool\.|wallet" 2>/dev/null | head -3)
+# 挖矿配置 grep 排除 NTP 池(chrony.conf / systemd-timesyncd 等)和常见系统配置
+# 真实矿池配置通常在 /tmp /var/tmp /opt /root /home 下,文件名多含 miner/xmrig/c3pool
+MINER_CFG=$(find /tmp /var/tmp /opt /root /home -type f \( -name "config.json" -o -name "*.conf" -o -name "config.txt" -o -name "pools.txt" \) 2>/dev/null \
+    | xargs grep -lE "stratum\+tcp|xmrig|c3pool|moneroocean|nicehash|hashvault|miningrigrentals|cryptonight" 2>/dev/null \
+    | head -3)
 [ -n "$MINER_CFG" ] && add_finding "🔴 挖矿配置文件" "$MINER_CFG" 10 "Critical" && echo -e "${RED}  [!] 挖矿配置:${NC}\n${RED}$MINER_CFG${NC}"
 
 # ============================================================

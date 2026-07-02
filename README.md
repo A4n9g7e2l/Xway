@@ -6,6 +6,7 @@
 ![Language](https://img.shields.io/badge/language-Bash-4EAA25)
 ![Platform](https://img.shields.io/badge/platform-Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v1.0.1-blue)
 ![Status](https://img.shields.io/badge/status-stable-success)
 
 ---
@@ -61,6 +62,18 @@
 | 11/13 | Java 内存马 | 可疑 JAR + Tomcat 近期 JSP | `memshell` `agent` |
 | 12/13 | 提权痕迹 | Sudoers 异常配置 | 非默认授权 |
 | 13/13 | 容器环境 | 是否在 Docker / k8s 中 | `/.dockerenv` `cgroup` |
+
+### 2.1 真实运行效果预览
+
+> 以下是脚本在 **1 台被植入 SSH 公钥的云主机**上跑出来的**真实报告**(已打码)。
+> 完整的 13 模块输出 + 风险评分 + 横向移动分析结论:
+
+<p align="center">
+  <img src="docs/sample-report.png" alt="XWAY IR 真实运行报告" width="900">
+</p>
+
+> 📌 **打码说明**:截图里所有 IP、主机名、用户名、SSH 公钥、攻击者 IP、来源 IP、SSH 指纹都已替换为占位符,真实信息仅保留在本地运行时的控制台上,不会泄露。
+> 这台主机的真实结论是: 🔴 **风险评分 76 分 / CRITICAL 高危失陷 / 横向移动证据 4 条** — 已作为跳板机被攻击者使用。
 
 ---
 
@@ -342,6 +355,14 @@ bash xway_ir.sh
 4. **关键字检测有漏报** — 攻击者只要稍作变形(用 `ev al` / `ba se64 -d` 加空格)就能绕过。建议配合 yara + 行为检测。
 5. **不具备修复能力** — 脚本只"看",不"动"。处置请人工执行。
 6. **不修改任何文件** — 跑完除了可选的 tee 日志,不留下任何痕迹。
+
+### 9.1 v1.0.1 修复的已知误报
+
+| 误报 | 原因 | 修复 |
+|---|---|---|
+| `/etc/chrony/chrony.conf` 误判为挖矿配置 | grep 的 `pool\.` 关键词在 NTP 池域名 `pool.ntp.org` 上误报 | 改为只搜 `stratum+tcp / xmrig / c3pool` 等**矿池专用**关键词 |
+| `/home/<USER>/.hermes/skills/` 误判为 Webshell | 蓝队/红队安全研究人员的资料库,本身就是合法 POC 资料 | 扫描时显式排除 `nuclei-templates` `.hermes/skills` `htb` `thm` `oscp` 等 |
+| `/home/<USER>/WhatWeb-0.5.5/` 提示为可疑文件 | WhatWeb 是合法的 Web 指纹识别工具 | **不修复** — 仍提示,但脚本下方说明文字标注"在授权测试机器上为正常" |
 
 ---
 
