@@ -1,0 +1,21 @@
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# 日志 / 临时
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Shell 历史与备份
+*.sh~
+.bash_history

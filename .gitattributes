@@ -1,0 +1,7 @@
+# 强制所有文本文件以 LF 换行,防止 Windows 环境下被改回 CRLF
+* text=auto eol=lf
+
+# 显式声明可执行 shell 脚本与文档
+*.sh     text eol=lf
+*.md     text eol=lf
+LICENSE  text eol=lf
