@@ -1,13 +1,16 @@
 # XWAY IR — Linux 失陷主机一键应急排查
 
 > 🛡️ **蓝队应急响应 / Incident Response / Linux 主机取证**
-> 纯 Bash 实现,零依赖,一条命令跑完 13 个排查模块 + 风险评分 + 横向移动证据链。
+> v2.0 — 18 个排查模块 + 攻击路径时间线 + JSON-lines 日志 + IOC 外置 + Maltrail 数据源
+> 架构借鉴自 [grayddq/GScan](https://github.com/grayddq/GScan) (MIT)
 
 ![Language](https://img.shields.io/badge/language-Bash-4EAA25)
 ![Platform](https://img.shields.io/badge/platform-Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-v1.0.1-blue)
+![Version](https://img.shields.io/badge/version-v2.0-blueviolet)
 ![Status](https://img.shields.io/badge/status-stable-success)
+![Tests](https://img.shields.io/badge/tests-bats-4EAA25)
+![CI](https://github.com/A4n9g7e2l/Xway/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -47,21 +50,38 @@
 
 ## 2. 核心特性
 
+### 2.1 18 个排查模块
+
 | 编号 | 模块 | 关注点 | 关键检测 |
 |---|---|---|---|
-| 1/13 | 进程排查 | 挖矿/僵尸/Web 进程派生 Shell | `xmrig` `minerd` `eval()` `www-data` 起 bash |
-| 2/13 | 网络外联 | 可疑 C2 端口/异常已建立连接 | `:4444` `:1080` `:31337` |
-| 3/13 | 启动项 | Crontab/systemd 服务持久化 | `wget` `/tmp/` 在 crontab |
-| 4/13 | 内核 Rootkit | 隐藏内核模块 + LD_PRELOAD 劫持 | `diamorphine` `reptile` `/etc/ld.so.preload` |
-| 5/13 | SUID/SGID | 30 天内新增的高权限二进制 | `find / -perm /4000 -mtime -30` |
-| 6/13 | 敏感文件 | 7 天内被改动的 `/etc` `/usr/local` `/root` | 异常配置篡改 |
-| 7/13 | Webshell | 数字命名 PHP/JSP + 一句话特征 | `eval($_POST` `assert($_POST` |
-| 8/13 | 挖矿特征 | 高 CPU 进程 + 矿池配置文件 | `stratum` `xmrig` `wallet` |
-| 9/13 | 可疑文件位置 | `/tmp` `/dev/shm` 可执行文件 + 银狐特征 | `[0-9][0-9].so` |
-| 10/13 | **横向移动** | SSH 公钥、SSH 隧道、/etc/hosts 劫持、扫描工具 | 9 类证据链聚合 |
-| 11/13 | Java 内存马 | 可疑 JAR + Tomcat 近期 JSP | `memshell` `agent` |
-| 12/13 | 提权痕迹 | Sudoers 异常配置 | 非默认授权 |
-| 13/13 | 容器环境 | 是否在 Docker / k8s 中 | `/.dockerenv` `cgroup` |
+| 1/18 | 进程排查 | 挖矿/僵尸/Web 进程派生 Shell | `xmrig` `minerd` `eval()` `www-data` 起 bash |
+| 2/18 | 网络外联 | 可疑 C2 端口/异常已建立连接 | `:4444` `:1080` `:31337` |
+| 3/18 | 启动项 | Crontab/systemd 服务持久化 | `wget` `/tmp/` 在 crontab |
+| 4/18 | **内核 Rootkit (v2.0 增强)** | LKM 模块 + **84 文件/目录签名** + **/proc/kallsyms 比对** + 已知 LKM 黑名 | `diamorphine` `suterusu` `reptile` |
+| 5/18 | SUID/SGID | 30 天内新增的高权限二进制 | `find / -perm /4000 -mtime -30` |
+| 6/18 | 敏感文件 | 7 天内被改动的 `/etc` `/usr/local` `/root` | 异常配置篡改 |
+| 7/18 | Webshell | 数字命名 + 一句话 + **已知 Webshell 家族** | `b374k.php` `c99.php` `eval($_POST` |
+| 8/18 | 挖矿特征 | 高 CPU + 矿池配置 + **Maltrail 矿池域名** | `stratum` `xmrig` `pool.minexmr.com` |
+| 9/18 | 可疑文件位置 | `/tmp` `/dev/shm` 可执行文件 + 银狐特征 | `[0-9][0-9].so` |
+| 10/18 | **横向移动 (v2.0 增强)** | SSH 公钥 + **爆破成功后入侵关联** + 隧道 + 扫描工具 | 10 类证据 |
+| 11/18 | Java 内存马 | 可疑 JAR + Tomcat 近期 JSP | `memshell` `agent` |
+| 12/18 | 提权痕迹 | Sudoers 异常配置 | 非默认授权 |
+| 13/18 | 容器环境 | 是否在 Docker / k8s 中 | `/.dockerenv` `cgroup` |
+| 14/18 | **Shell 环境劫持 (v2.0 新增)** | 5 种 LD_* + PROMPT_COMMAND 注入 | `LD_PRELOAD=` `LD_AOUT_PRELOAD=` ... |
+| 15/18 | **命令别名劫持 (v2.0 新增)** | `.bashrc` 替换 `ps/netstat/...` | `alias ps=` `alias netstat=` |
+| 16/18 | **SSH 后门 (v2.0 新增)** | sshd 非 ELF / 非标准端口监听 | `file /usr/sbin/sshd` |
+| 17/18 | **账号合规 (v2.0 新增)** | `/etc/shadow` 权限 + 空密码账号 | `chmod 000 /etc/shadow` |
+| 18/18 | **bash_history 反 shell (v2.0 新增)** | 每行匹配反 shell 模式 | `/dev/tcp/` `nc -e` `python -c` |
+
+### 2.2 v2.0 新能力 (借鉴自 GScan)
+
+| 能力 | 说明 |
+|---|---|
+| **数据-逻辑分离** | 所有 IOC 抽出到 `lib/`,用户改文本即可扩展 |
+| **攻击路径时间线** | 把所有发现按 mtime 排序,叙事化输出事故链条 |
+| **JSON-lines 日志** | 同时输出 `.log` (人读) + `.jsonl` (SIEM 接入) |
+| **5 个 GScan 检查** | SSH 爆破关联 / 84 Rootkit 签名 / alias 劫持 / 5 种 LD 劫持 / sshd 完整性 |
+| **Maltrail IOC 库** | 精选 ~500 条高信号 IOC,保留 MIT attribution |
 
 ### 2.1 真实运行效果预览
 

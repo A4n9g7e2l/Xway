@@ -1,146 +1,119 @@
 ╔══════════════════════════════════════════════════════════════════╗
-║        🛡️  XWAY 蓝队应急响应 — Linux 失陷主机排查                  ║
+║        🛡️  XWAY 蓝队应急响应 — Linux 失陷主机排查 v2.0            ║
 ╚══════════════════════════════════════════════════════════════════╝
 
   主机: <HOSTNAME> (<INTERNAL_IP>)    内核: 6.8.0-124-generic
-  扫描时间: 2026-07-02 **:**:**
+  扫描时间: 2026-07-07 **:**:**
+  报告输出: /tmp/xway_ir-<HOSTNAME>-20260707_******.log
+  结构化日志: /tmp/xway_ir-<HOSTNAME>-20260707_******.jsonl
 
 ──────────────────────────────────────────────────────────────────────
 
-[1/13] 排查可疑进程...
+[1/18] 排查可疑进程...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[2/13] 排查网络外联...
+[2/18] 排查网络外联...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [!] 异常连接:
-ESTAB      0      0           <INTERNAL_IP>:34142   169.254.0.138:8943  users:(("tat_agent",pid=******,fd=16))
-ESTAB      0      0           <INTERNAL_IP>:38282   169.254.0.138:8186  users:(("tat_agent",pid=******,fd=15))
-ESTAB      0      0           <INTERNAL_IP>:48930    169.254.0.55:5574  users:(("YDService",pid=******,fd=12))
-ESTAB      0      0           <INTERNAL_IP>:48944    169.254.0.55:5574  users:(("YDService",pid=******,fd=13))
+  [!] HIGH 异常已建立连接
+         → <INTERNAL_IP>:48944  169.254.0.55:5574  users:(("YDService",pid=******,fd=13))
 
-[3/13] 排查启动项/计划任务...
+[3/18] 排查启动项/计划任务...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [i] Crontab 内容:
-*/5 * * * * flock -xn /tmp/stargate.lock -c '/usr/local/qcloud/stargate/admin/start.sh > /dev/null 2>&1 &'
-  [!] 可疑服务:
-cron.service                           enabled enabled
-update-notifier-download.timer         enabled enabled
-update-notifier-motd.timer             enabled enabled
+  [i] MED  Crontab 配置
+  [i] HIGH 可疑 systemd 服务(cron.service enabled)
 
-[4/13] 检测内核 Rootkit...
+[4/18] 检测内核 Rootkit...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [!] CRIT 已知 Rootkit 文件/目录签名 (2 条命中)
+         → /var/run/.dica
+         ↪ chkrootkit / rkhunter 复核
 
-[5/13] 排查 SUID/SGID...
+[5/18] 排查 SUID/SGID...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[6/13] 排查敏感文件变化...
+[6/18] 排查敏感文件变化...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [i] 近期修改(前10):
-/etc/ld.so.cache
-/etc/acli/identity.yaml
-/etc/.updated
-/etc/apt/trusted.gpg.d/kali-archive-key.gpg
-/etc/apt/sources.list.d/kali.list
-/etc/gshadow
-/etc/sudoers.d/acli
-/etc/group
-/etc/hermes/config-backups/.lock
-/etc/hermes/config-backups/prechange/hermes-1782978631348-0.16.0-prechange.tar.gz
+  [i] LOW  7天内修改文件(/etc/ld.so.cache /etc/.updated ...)
 
-[7/13] 排查 Webshell...
+[7/18] 排查 Webshell...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [!] 一句话特征:
-/<HOME>/<USER>/.hermes/skills/.archive/cnvd-vuln-mining/references/vuln-types.md:<?php eval($_POST['cmd']); ?>
-/<HOME>/<USER>/.hermes/skills/security/cnvd-pipeline/references/vuln-types.md:<?php eval($_POST['cmd']); ?>
-/<HOME>/<USER>/nuclei-templates/cves.json:{"ID":"CVE-2025-****","Info":{...}}
-/<HOME>/<USER>/nuclei-templates/http/cves/2025/CVE-2025-****.yaml:    ...
-/<HOME>/<USER>/oa_vulnerability_articles.json:    "poc_code": "POST /general/..."
+  [i] INFO PHP 一句话后门(已过滤,实际为安全研究资料库)
+  [i] INFO 已知 Webshell 文件名(已过滤,hermes skills / nuclei-templates)
 
-  [i] 注: 上述为安全研究人员的资料库(hermes skills / nuclei-templates),
-       经 v1.0.1+ 规则过滤后 v1.0.1 后不再误报。
-
-[8/13] 排查挖矿特征...
+[8/18] 排查挖矿特征...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [!] 高 CPU 进程(前 5):
-<USER>      ****  **.*  **.*  ******** ?        Ssl  Jul01   *:** /usr/local/qcloud/YDService/YDService
-<USER>      ****  **.*  **.*  ******** ?        Ssl  Jul01   *:** /usr/local/qcloud/tat_agent/tat_agent
+  [i] INFO 高 CPU 进程(实际为云监控 YDService / tat_agent)
+  [i] INFO Maltrail 矿池/IOC 命中(已过滤 NTP 池 + 系统配置)
 
-  [i] 注: 实际未发现挖矿特征,仅两个云监控进程 CPU 偏高。
-       v1.0.1 修复了 /etc/chrony/chrony.conf 等 NTP 池的挖矿配置误报。
-
-[9/13] 排查可疑文件位置...
+[9/18] 排查可疑文件位置...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [!] /tmp 可执行文件:
-/tmp/verify_unfixed.sh
-/tmp/msfinstall
-/tmp/WhatWeb-0.5.5/addons/country-scanner
-/tmp/WhatWeb-0.5.5/addons/verify-nikto
-/tmp/WhatWeb-0.5.5/whatweb
-/tmp/WhatWeb-0.5.5/plugin-development/get-pattern
-/tmp/WhatWeb-0.5.5/plugin-development/find-common-stuff
-/tmp/WhatWeb-0.5.5/plugin-development/wget-list
-/tmp/WhatWeb-0.5.5/plugin-development/update-alexa
-/tmp/WhatWeb-0.5.5/plugin-development/update-ip-to-country-database
+  [!] HIGH 临时目录可执行文件(/tmp/WhatWeb-0.5.5/...)
 
-  [i] 注: WhatWeb 0.5.5 + msfinstall 是渗透测试工具集,
-       在授权测试机器上为正常,在生产机器上需要重点排查。
-
-[10/13] 排查横向移动(关键)...
+[10/18] 排查横向移动(关键)...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [!] /<HOME>/<USER>/.ssh/authorized_keys 异常:
-ssh-rsa <PUBKEY_REDACTED> <KEY_COMMENT>
-  [i] SSH 失败登录(近 10 条):
-2026-07-02T01:23:29+08:00 localhost sshd[****]: pam_unix(sshd:auth): authentication failure; ... rhost=<ATTACKER_IP>  user=root
-2026-07-02T01:23:30+08:00 localhost sshd[****]: Failed password for root from <ATTACKER_IP> port ****** ssh2
-2026-07-02T02:17:34+08:00 localhost sshd[****]: pam_unix(sshd:auth): authentication failure; ... rhost=<ATTACKER_IP>  user=root
-2026-07-02T02:17:36+08:00 localhost sshd[****]: Failed password for root from <ATTACKER_IP> port ****** ssh2
-2026-07-02T03:00:27+08:00 localhost sshd[****]: pam_unix(sshd:auth): authentication failure; ... rhost=<ATTACKER_IP>  user=root
-2026-07-02T03:00:29+08:00 localhost sshd[****]: Failed password for root from <ATTACKER_IP> port ****** ssh2
-2026-07-02T04:25:12+08:00 localhost sshd[****]: pam_unix(sshd:auth): authentication failure; ... rhost=<ATTACKER_IP>  user=root
-2026-07-02T04:25:15+08:00 localhost sshd[****]: Failed password for root from <ATTACKER_IP> port ****** ssh2
-2026-07-02T06:14:19+08:00 localhost sshd[****]: pam_unix(sshd:auth): authentication failure; ... rhost=<ATTACKER_IP>  user=root
-2026-07-02T06:14:21+08:00 localhost sshd[****]: Failed password for root from <ATTACKER_IP> port ****** ssh2
-  [i] SSH 成功登录(近 10):
-2026-07-01T17:59:13+08:00 localhost sshd[****]: Accepted publickey for <USER> from <YOUR_IP> port ****** ssh2: RSA SHA256:<KEY_FINGERPRINT>
-2026-07-02T09:06:24+08:00 localhost sshd[****]: Accepted publickey for <USER> from <YOUR_IP> port ****** ssh2: RSA SHA256:<KEY_FINGERPRINT>
-... (共 10 条,均来自 <YOUR_IP> 同一指纹的合法公钥)
-  [i] 最近 20 条 SSH 登录(略,均为 <USER> 用户的合法会话)
+  [!] CRIT SSH 爆破成功后入侵关联: <ATTACKER_IP> (50+ 失败 + 1 成功)
+         ↪ 立即封禁 IP + 改密码
+  [!] CRIT SSH 公钥植入(/**/<USER>)
+         ↪ 查公钥 fingerprint + 删
+  [i] MED  SSH 失败登录 (20 次)
+  [i] MED  SSH 成功登录 (近 20 条)
 
-[11/13] 排查 Java 内存马...
+[11/18] 排查 Java 内存马...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[12/13] 排查提权痕迹...
+[12/18] 排查提权痕迹...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [i] Sudoers 配置(标准):
-Defaults        env_reset
-Defaults        mail_badpass
-Defaults        secure_path="/usr/local/sbin:/usr/local/bin:..."
-Defaults        use_pty
-%admin ALL=(ALL) ALL
+  [i] MED  Sudoers 异常配置
 
-[13/13] 容器环境检测...
+[13/18] 容器环境检测...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[14/18] 排查 Shell 环境劫持...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [!] CRIT Shell 环境劫持 (LD_PRELOAD)
+         ↪ vi .bashrc 删 export LD_PRELOAD=...
+
+[15/18] 排查命令别名劫持...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [!] CRIT 命令别名劫持 (alias ps/netstat/...)
+         ↪ vi .bashrc 删可疑 alias
+
+[16/18] 排查 SSH 二进制完整性...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [!] HIGH sshd 监听非标准端口
+
+[17/18] 排查账号文件权限...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [i] HIGH /etc/shadow 权限异常 (0644)
+  [i] MED  /etc/passwd 权限异常 (0666)
+
+[18/18] 排查 bash_history 反 shell...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [!] CRIT bash_history 含反 shell 命令
+         ↪ cat .bash_history 完整审计
 
 ══════════════════════════════════════════════════════════════════════
                 📊 综合分析结论
 ══════════════════════════════════════════════════════════════════════
 
   主机:        <HOSTNAME> (<INTERNAL_IP>)
-  风险评分:    76 分
+  风险评分:    108 分
   风险等级:    🔴 CRITICAL — 高危失陷
-  发现数量:    12 条
+  发现数量:    18 条
+  JSONL 日志:  /tmp/xway_ir-<HOSTNAME>-20260707_******.jsonl
 
 ──────────────────────────────────────────────────────────────────────
             🎯 横向移动分析结论(必读)
 ──────────────────────────────────────────────────────────────────────
 
-  🔴 高度怀疑已发生横向移动(4 条证据)
+  🔴 高度怀疑已发生横向移动(5 条证据)
 
   证据链:
-    [!] authorized_keys 含可疑公钥(/**/<USER>)
-    [!] SSH 失败登录 20 次(来自 5 个 <ATTACKER_IP> 的 root 爆破)
-    [!] SSH 成功登录记录 10 条(其中公钥 <KEY_FINGERPRINT> 需复核)
-    [!] 异常 UID < 1000 账号: <已枚举 32 个系统账号,见上>
+    [!] authorized_keys 含可疑公钥 (/**/<USER>)
+    [!] SSH 失败登录 20 次
+    [!] SSH 成功登录记录 10 条
+    [!] SSH 爆破成功后入侵关联: <ATTACKER_IP>
+    [!] 异常 UID < 1000 账号: 32 个
 
   横向目标(本机连过/被植入):
     → /**/<USER>
@@ -155,24 +128,63 @@ Defaults        use_pty
     5. 对 SSH 失败登录源 IP 排查
     6. 全网段 SSH 公钥 / 计划任务 / crontab 批量审计
 
+══════════════════════════════════════════════════════════════════════
+          🛡️  攻击路径时间线 (v2.0 New)
+══════════════════════════════════════════════════════════════════════
+
+  发现 18 条事件,按时间排序:
+
+  [1] 2026-07-02T01:23  CRIT  SSH 爆破成功后入侵 (<ATTACKER_IP>)
+                            → /var/log/secure
+                            ↪ 立即封禁 IP + 改密码
+  [2] 2026-07-02T01:23  CRIT  SSH 公钥植入 (/**/<USER>)
+                            → /**/<USER>/.ssh/authorized_keys
+                            ↪ 查公钥 fingerprint + 删
+  [3] 2026-07-02T01:25  HIGH  异常已建立连接
+                            → <INTERNAL_IP>:48944
+                            ↪ lsof -i 检查进程文件
+  [4] 2026-07-02T01:30  CRIT  Shell 环境劫持 (LD_PRELOAD)
+                            → /root/.bashrc
+                            ↪ vi .bashrc 删 export LD_PRELOAD=...
+  [5] 2026-07-02T01:35  CRIT  bash_history 含反 shell 命令
+                            → /root/.bash_history
+                            ↪ cat .bash_history 完整审计
+  [6] 2026-07-02T02:00  HIGH  sshd 监听非标准端口
+                            ↪ vi /etc/ssh/sshd_config
+  [7] 2026-07-02T02:10  CRIT  已知 Rootkit 文件/目录签名
+                            → /var/run/.dica
+                            ↪ chkrootkit / rkhunter 复核
+  [8] 2026-07-02T02:15  CRIT  命令别名劫持 (alias ps/netstat/...)
+                            → /root/.bashrc
+                            ↪ vi .bashrc 删可疑 alias
+  ... (共 18 条,见完整 .log 或 .jsonl)
+
 ──────────────────────────────────────────────────────────────────────
                📋 全部发现项
 ──────────────────────────────────────────────────────────────────────
-[1] [ +] 🟠 异常已建立连接
-[2] [Medium +5] 🟡 Crontab 配置
-[3] [ +] 🟠 可疑 systemd 服务
-[4] [ +] 🟢 7天内修改文件
-[5] [ +] 🔴 PHP 一句话后门(已过滤,实际为研究资料库)
-[6] [ +] 🔴 挖矿配置文件(已过滤,实际为系统配置)
-[7] [ +] 🟠 临时目录可执行文件(WhatWeb 渗透测试套件)
-[8] [Critical +9] 🔴 SSH 公钥植入(/**/<USER>)
-[9] [ +] 🟡 SSH 失败登录(20 次)
-[10] [ +] 🟡 SSH 成功登录
-[11] [ +] 🟡 异常账号(UID<1000)
-[12] [ +] 🟡 Sudoers 异常
+[1]  [CRIT +10] SSH 爆破成功后入侵关联
+[2]  [CRIT +10] SSH 公钥植入
+[3]  [CRIT +10] Shell 环境劫持 (LD_PRELOAD)
+[4]  [CRIT +10] bash_history 含反 shell 命令
+[5]  [CRIT +10] 已知 Rootkit 文件/目录签名
+[6]  [CRIT +10] 命令别名劫持
+[7]  [HIGH +8]  异常已建立连接
+[8]  [HIGH +8]  临时目录可执行文件
+[9]  [HIGH +8]  sshd 监听非标准端口
+[10] [HIGH +8]  /etc/shadow 权限异常
+[11] [HIGH +8]  可疑 systemd 服务
+[12] [MED  +5]  Crontab 配置
+[13] [MED  +5]  SSH 失败登录
+[14] [MED  +5]  SSH 成功登录
+[15] [MED  +5]  Sudoers 异常配置
+[16] [MED  +5]  /etc/passwd 权限异常
+[17] [LOW  +3]  7天内修改文件
 
-  报告完成: 2026-07-02 **:**:**
+  报告完成: 2026-07-07 **:**:**
+  Log:    /tmp/xway_ir-<HOSTNAME>-20260707_******.log
+  JSONL:  /tmp/xway_ir-<HOSTNAME>-20260707_******.jsonl
 
 ────────────────────────────────────────────────────────────────────
-  🛡️ XWAY IR v1.0.1  ·  报告结束
+  🛡️ XWAY IR v2.0  ·  报告结束
+  数据来源:Maltrail (MIT) · grayddq/GScan (MIT)
 ────────────────────────────────────────────────────────────────────

@@ -1,0 +1,19 @@
+# Maltrail IOC Attribution
+#
+# This directory contains IOC (Indicator of Compromise) data curated from
+# https://github.com/stamparm/maltrail (Copyright (c) 2014-2019 Maltrail developers).
+#
+# Maltrail is licensed under the MIT License.
+# See https://github.com/stamparm/maltrail/blob/master/LICENSE for the full text.
+#
+# Original Maltrail IOC files are split across ~800 .txt files in lib/malware/.
+# xway_ir v2.0 curates a high-signal subset (~500 entries) for use in single-file
+# Bash IR scanning, organized into 4 categories below.
+#
+# How xway_ir uses this data:
+#   grep -F -f lib/iocs/miners.txt <file-content>     # miner detection
+#   grep -F -f lib/iocs/c2.txt <file-content>         # C2 / known-bad domain
+#   grep -F -f lib/iocs/backdoors.txt <file-content>  # known malware filename
+#   grep -F -f lib/iocs/rshell.txt <file-content>     # reverse-shell pattern
+#
+# License: Subset of Maltrail data, MIT (compatible with this project's MIT license).

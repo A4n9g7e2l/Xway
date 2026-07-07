@@ -1,0 +1,128 @@
+# xway_ir IOC — Known Malware / Backdoor Filenames (sub: backdoors)
+# Source: curated from https://github.com/stamparm/maltrail (MIT)
+# One IOC per line, # comments, blank lines ignored
+# Used by: xway_ir.sh check_tmp_exec / check_webshell_numeric / check_process_miner
+
+# --- Webshells ---
+b374k.php
+b374k
+wso.php
+wso
+c99.php
+c99shell.php
+c99madshell.php
+c100.php
+r57.php
+r57shell.php
+phpspy.php
+pHpSpy
+webshell.php
+webshell.jsp
+webshell.aspx
+mini.php
+shell.php
+shell.jsp
+shell.aspx
+cmd.php
+cmd.jsp
+cmd.aspx
+backdoor.php
+backdoor.jsp
+backdoor.aspx
+backdoors.php
+backdoorshell.php
+phpshell
+shell?
+c99?
+r57?
+b374k?
+caidao.jsp
+caidao.aspx
+caidao.php
+antsword.php
+antsword.jsp
+antsword.aspx
+godzilla.jsp
+godzilla.php
+godzilla.aspx
+behinder.php
+behinder.jsp
+behinder.aspx
+memshell
+memshell.class
+agent.jar
+agent.class
+evil.jar
+hack.jar
+
+# --- Reverse shell scripts ---
+rev.sh
+reverse.sh
+shell.sh
+backdoor.sh
+connect-back.sh
+connectback.sh
+cback.sh
+pty-shell.sh
+reverse-tcp.sh
+
+# --- Linux rootkit / backdoor binaries ---
+.bashrc.swp
+.sshd
+.sshd_config.backup
+.authorized_keys.bak
+/etc/cron.d/0hourly
+/etc/cron.d/apache
+/etc/cron.d/auditd
+/etc/cron.daily/0logwatch
+/etc/cron.hourly/0anacron
+/etc/cron.weekly/0logwatch
+/etc/cron.monthly/0logwatch
+
+# --- RAT / C2 client binaries ---
+darkcomet
+njrat
+poisonivy
+xtreme
+blackshades
+nanocore
+asyncrat
+quasar
+remcos
+warzone
+emotet
+trickbot
+dridex
+zeus
+citadel
+spyeye
+ice-x
+cybergate
+optima
+predator
+darktrack
+ap0calypse
+shadowtech
+
+# --- Exploit kit markers ---
+angler
+neutrino
+rig
+magnitude
+nuclear
+blackhole
+sofacy
+sednit
+fancy-bear
+cozy-bear
+lazarus
+apt28
+apt29
+fin7
+carbanak
+
+# --- Generic suspicious binaries in /tmp ---
+..   # dot-dot hidden
+. ..  # spaces in name
+     # empty name
+...   # triple-dot

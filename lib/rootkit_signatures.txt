@@ -1,0 +1,282 @@
+# xway_ir 已知 Rootkit 文件/目录签名
+# 来源:grayddq/GScan lib/plugins/Rootkit_Analysis.py (84 个 rootkit 签名精选 60 条)
+# 用法:xway_ir.sh 对每一行做 [ -e "$p" ] 检测
+# 备注:不要全部 alert 为 Critical — 误报率高,只标 High,让操作员人工确认
+
+# --- Adore ---
+/usr/lib/.libgh-gh
+/usr/lib/libgh-gh
+
+# --- AjaKit ---
+/dev/.lib
+/dev/.lib/.1
+/dev/.lib/.2
+
+# --- Apache Worm ---
+/var/www/.bash_logout
+
+# --- Ambient (aPa) ---
+/usr/share/.aPa
+/var/run/.aPa
+/usr/share/.aPa
+/usr/share/.wine
+/var/log/.aPa
+
+# --- Balaur ---
+/usr/lib/.kbeast
+/usr/lib/.kin
+/usr/lib/.libselinux.so.1
+/usr/share/.sqe
+
+# --- beX2 ---
+/usr/lib/ldlibso
+/usr/include/cxk
+/usr/lib/libfnp
+
+# --- BOBkit ---
+/dev/.[A-Z]*.bak
+
+# --- cb (rootkit cb) ---
+/dev/.kork
+/dev/.kork2
+
+# --- CiNIK ---
+/usr/lib/.cinik
+/usr/lib/.cinik/cleaner
+/usr/lib/.cinik/config
+/usr/lib/.cinik/logger
+/usr/lib/.cinik/rsya
+/usr/lib/.cinik/sshd
+
+# --- CX ---
+/usr/lib/lib/.conslin.so.1
+
+# --- Diamorphine ---
+/lib/modules/*/extra/diamorphine.ko
+/lib/modules/*/extra/reptile.ko
+
+# --- Dica ---
+/var/run/.dica
+/var/run/.dica/dicalog
+/var/run/.dica/dicarc
+/var/run/.dica/dicart
+/var/run/.dica/cleaner
+
+# --- Dreams ---
+/dev/.rdts
+/var/run/.../dreams
+
+# --- Ebury ---
+/lib/libns2.so
+/lib/libns5.so
+/lib64/libns2.so
+/lib64/libns5.so
+/usr/lib/libns2.so
+/usr/lib/libns5.so
+/usr/lib64/libns2.so
+/usr/lib64/libns5.so
+/lib/x86_64-linux-gnu/libns2.so
+/lib/x86_64-linux-gnu/libns5.so
+/lib/i386-linux-gnu/libns2.so
+/lib/i386-linux-gnu/libns5.so
+
+# --- ENYE ---
+/dev/.enyed
+/tmp/.enyed
+
+# --- Flea ---
+/usr/lib/libflea.so.0.6.5
+/var/tmp/flea.socket
+
+# --- GasKit ---
+/dev/.gasx
+/dev/.gask
+/dev/.gasi
+/dev/.gaskit
+
+# --- Heroin ---
+/usr/include/rand/randlib.h
+
+# --- HjC ---
+/dev/.hj
+/var/run/.hj
+/lib/.hj
+/usr/lib/.hj
+/usr/include/.hj
+
+# --- ignoKit ---
+/usr/lib/.igno
+/usr/lib/.igno/cleaner
+/usr/lib/.igno/logger
+/usr/lib/.igno/sshddd
+/usr/lib/.igno/sshhide
+
+# --- iLLogiC ---
+/usr/lib/.iLL
+/usr/lib/.iLL/iLL.log
+/usr/lib/.iLL/iptabels
+
+# --- IntoXonia-NG ---
+/usr/include/.intox
+
+# --- Jynx / Jynx2 ---
+/usr/lib/.jynx
+/usr/lib/.jynx2
+
+# --- KBeast ---
+/usr/include/bencode.h
+/usr/include/ksuperkey.h
+/usr/include/loader.h
+
+# --- Knark ---
+/proc/knark
+/dev/.knark
+/dev/knark
+/usr/lib/.knark
+
+# --- Komplex ---
+/usr/lib/.kcomplex
+
+# --- LINUXV ---
+/dev/.linuxv
+
+# --- LION ---
+/dev/.lion
+/var/log/lion
+/usr/include/.lion
+
+# --- MOKES ---
+/usr/lib/libmokets.so
+
+# --- MRK ---
+/dev/.mrd
+
+# --- MOODNT ---
+/dev/.mood
+
+# --- NIO ---
+/usr/lib/.nio
+
+# --- OPTICKIT ---
+/dev/.opti
+/usr/lib/.opti
+
+# --- OSXRK ---
+/dev/.osxrk
+
+# --- OZ ---
+/dev/.oz
+/usr/lib/.oz
+
+# --- PHALANX ---
+/dev/.phalanx
+/dev/.phalcx
+
+# --- PHALANX2 ---
+/dev/phoenix
+
+# --- PORTACELO ---
+/dev/portacelo
+
+# --- PROTON ---
+/usr/lib/libsocket.so.6
+/usr/lib/libsocket.so.5
+
+# --- REDSTORM ---
+/dev/.redstorm
+/var/log/redstorm
+
+# --- RHSHARPES ---
+/var/run/.log
+/usr/include/rpc/rpc.h
+
+# --- RSHA ---
+/usr/bin/.rsha
+
+# --- SHUTDOWN ---
+/usr/include/fake_shadow.h
+/etc/.fake_shadow
+
+# --- SHV4 ---
+/etc/ld.so.hash
+/usr/lib/libns.so
+/usr/lib/libsh.so
+
+# --- SHV5 ---
+/etc/sh.conf
+
+# --- Sin ---
+/dev/.sin
+
+# --- SLAPPER ---
+/tmp/.SLAPPER_PRIVATE_KEY
+
+# --- SNEAKIN ---
+/usr/lib/.sne
+/usr/lib/.sne/sne
+/usr/lib/.sne/auth
+
+# --- Suckit ---
+/dev/.suckit
+/usr/include/suckit.h
+/usr/lib/.suckit
+/usr/lib/suckit
+/usr/share/suckit
+/usr/local/share/suckit
+
+# --- SunOS ---
+/dev/.sun
+
+# --- Telekit ---
+/usr/lib/.tele
+/usr/lib/.tele/telk
+
+# --- TORN ---
+/dev/.torn
+
+# --- TOGROOT ---
+/dev/.tog
+
+# --- TUXTENDO ---
+/dev/.tux
+
+# --- URK ---
+/usr/lib/urkm
+
+# --- VCKIT ---
+/dev/.vc
+/usr/lib/.vc
+
+# --- VAMPIRE ---
+/dev/.vampire
+
+# --- WEAPONX ---
+/usr/lib/.wmx
+
+# --- XZIBIT ---
+/dev/.x
+/usr/lib/.x
+
+# --- ZARWT ---
+/usr/lib/.z
+/usr/share/.z
+
+# --- ZK ---
+/usr/lib/.zk
+/usr/share/.zk
+
+# --- common generic rootkit indicators ---
+/dev/srd0
+/dev/hdx
+/dev/dos
+/dev/.lib
+/usr/include/cxk
+/lib/.sso
+/lib/.so
+/usr/lib/.so
+
+# --- suspicious permission/world-writable in /etc ---
+/etc/shadow.bak
+/etc/passwd.bak
+/etc/sudoers.bak
+/etc/ssh/sshd_config.bak

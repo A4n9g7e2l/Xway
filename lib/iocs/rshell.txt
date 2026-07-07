@@ -1,0 +1,101 @@
+# xway_ir IOC — Reverse Shell / Suspicious Command Patterns (sub: rshell)
+# Source: curated from https://github.com/stamparm/maltrail (MIT)
+# Each line is a substring pattern, used by grep -F -f
+# Used by: xway_ir.sh check_eval_exec / check_bash_history / check_process_eval
+
+# --- bash reverse shells ---
+/dev/tcp/
+bash -i >& /dev/tcp
+bash -c /dev/tcp
+0<&196;exec 196<>/dev/tcp
+exec 5<>/dev/tcp
+exec 9<>/dev/tcp
+
+# --- netcat variants ---
+nc -e /bin/sh
+nc -e /bin/bash
+nc -c /bin/sh
+nc -c /bin/bash
+nc.traditional -e
+ncat --exec /bin/sh
+ncat -e /bin/sh
+netcat -e /bin/sh
+
+# --- mkfifo + nc reverse shell ---
+mkfifo /tmp/
+rm /tmp/p; mknod /tmp/p p
+/tmp/p;sh</tmp/p
+
+# --- python reverse shells ---
+python -c 'import socket,subprocess,os
+python3 -c 'import socket,subprocess,os
+python -c 'import pty; pty.spawn
+python3 -c 'import pty; pty.spawn
+python -c 'import os; os.system
+python -c socket.socket
+
+# --- perl reverse shells ---
+perl -e 'use Socket;
+perl -MIO -e
+perl -e 'exec "/bin/sh"
+
+# --- php reverse shells ---
+php -r '$sock=fsockopen
+php -r 'system
+php -r 'exec
+php -r 'passthru
+php -r 'eval($_POST
+php -r 'eval($_GET
+php -r 'eval($_REQUEST
+
+# --- ruby reverse shells ---
+ruby -rsocket -e 'exec
+ruby -rsocket -e 'f=TCPSocket.open
+
+# --- socat / curl pipe shell ---
+socat exec:'bash -li'
+socat tcp-connect:
+curl http://
+wget http://
+curl .*| *(ba)?sh
+wget .*| *(ba)?sh
+curl -s .*| bash
+wget -q -O - .*| bash
+
+# --- base64 encoded commands ---
+base64 -d
+echo .* | base64 -d
+echo .* | base64 --decode
+atob(.*)
+Buffer.from(.*,'base64')
+
+# --- privilege escalation markers ---
+sudo /bin/sh
+sudo su -
+sudo -i
+chmod u+s /bin/sh
+chmod 4755 /bin/sh
+setuid(0)
+
+# --- suspicious file operations in shell history ---
+tar cf - /etc/shadow
+dd if=/dev/sda of=
+nc -l -p 4444 -e
+nc -l -p 5555 -e
+nc -l -p 6666 -e
+nc -l -p 1234 -e
+ncat -l -p
+socat TCP-LISTEN:
+ssh -R
+ssh -D
+ssh -L
+
+# --- container escape markers ---
+docker run --privileged
+docker run --pid=host
+docker run --net=host
+nsenter --target 1 --all
+unshare -r
+chroot /
+mount /dev/sda
+mount -o remount,rw /

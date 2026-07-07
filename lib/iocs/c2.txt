@@ -1,0 +1,103 @@
+# xway_ir IOC — C2 / Known-Bad Domains and IPs (sub: c2)
+# Source: curated from https://github.com/stamparm/maltrail (MIT)
+# One IOC per line, # comments, blank lines ignored
+# Used by: xway_ir.sh check_dns / check_hosts / check_outbound_dns
+
+# --- APT / state-sponsored C2 ---
+# (curated subset — list is intentionally short to reduce false positives)
+apt1.dynu.net
+news.dynu.net
+www.dynu.net
+mail.dynu.net
+dns.dynu.net
+mail.igg.biz
+ns1.afraid.org
+ns2.afraid.org
+mx1.qq.com
+mail.zh-cn.cc
+www.zh-cn.cc
+mail.charming-nightingale.com
+
+# --- Ransomware C2 ---
+lockerzcn.com
+omflre.com
+oqssqo.com
+gtube.org
+spreadfirefox.com
+spreadfirefox.org
+cortinadodepalitos.com.br
+hugesoft.org
+redhatupdates.com
+rsaupdates.com
+kernelupdate.com
+windows-updates.net
+adobe-update.com
+javaupdate.net
+mstupdate.com
+msftncsi.com
+
+# --- Banking trojans C2 ---
+go0gle.com
+go0gle.net
+goog1e.com
+app1e.com
+app1e.net
+microsft.com
+microsft.org
+microsooft.com
+micros0ft.com
+rnicrosoft.com
+mircosoft.com
+rnyahoo.com
+yahoo-services.com
+yahoonews.com
+
+# --- Phishing / Typosquat ---
+goog1e.com
+g00gle.com
+googlle.com
+yahooo.com
+yahooo.net
+yahoogroupsupport.com
+microsoft-update.net
+windows-update.com
+apple-update.com
+paypal-secure.com
+paypal-verify.com
+
+# --- Tor exit nodes (sample, NOT comprehensive — for reference only) ---
+# (xway_ir does NOT block Tor by default; this is only for IOC awareness)
+
+# --- Bulletproof hosting / abuse.ch known ranges (sample) ---
+185.130.5.231
+185.244.25.221
+185.117.75.91
+185.117.75.92
+185.117.75.93
+185.117.75.94
+185.117.75.95
+5.61.34.0/24
+5.61.35.0/24
+91.219.236.0/22
+
+# --- Generic suspicious TLD (substring match) ---
+.tk
+.top
+.xyz
+.gq
+.ml
+.cf
+.icu
+.work
+.cyou
+.su
+.onion
+
+# --- Generic suspicious URL pattern ---
+/cgi-bin/index.cgi?action=
+/admin/login.php?redirect=
+/phpmyadmin/scripts/setup.php
+/wp-content/plugins/
+/wp-includes/
+/xmlrpc.php
+/administrator/index.php?option=
