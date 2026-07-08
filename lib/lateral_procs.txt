@@ -1,0 +1,20 @@
+# xway_ir 横向移动进程模式
+# 用途:ps auxww 中匹配 SSH 隧道 / nc 反向 / socat
+# 用法:ps auxww | grep -E "$(tr '\n' '|' < lib/lateral_procs.txt)"
+
+ssh -R
+ssh -D
+ssh -L
+ssh -fCNg
+nc -l
+ncat -l
+socat.*exec
+socat.*TCP-LISTEN
+chisel
+ligolo
+ngrok
+frpc
+frps
+earthworm
+ew_for_linux
+./ew

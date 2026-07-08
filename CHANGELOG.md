@@ -5,6 +5,76 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v3.0] — 2026-07-08 — "NOP Team 应急响应手册全量集成"
+
+### ⭐ Major Changes
+
+#### 基于 NOP Team《Linux 应急响应手册 v2.0.2》全量集成
+- 从 18 模块扩展到 **37 个检查模块**
+- 集成手册 39 项常规检查中的 27 项缺失项
+- 新增 **7 类隧道检测**(SSH/DNS/ICMP/HTTP/SSL/Socks + bpftrace 辅助)
+- 新增 **6 类暴力破解日志分析**(SSH/MySQL/FTP/Redis/MongoDB/SMTP)
+
+#### 函数化架构重构
+- 全部 37 个模块包成 `check_01()` ~ `check_37()` 函数
+- `ALL_CHECKS` 数组 dispatch,可选择性执行
+- 新增 6 个 CLI flags:`--module` / `--severity` / `--timeout` / `--no-color` / `--out-dir` / `--json-only`
+
+#### v2.0 Bug 修复
+- **c2.txt 孤儿**:模块 02 和 34 现在消费 c2.txt
+- **SCORE 死代码**:模块 10.3 的 `SCORE=3/7` 删除,统一走 `log_finding`
+- **Python 隐藏依赖**:末尾 JSONL 解析改用 `awk -F'"'`,去掉 python
+- **评分逻辑重复**:抽成 `score_for_level()` + `level_to_color()` + `level_meets_filter()` 三个函数
+
+### 🚀 19 个新增模块 (来自手册)
+
+| # | 模块 | 手册编号 |
+|---|---|---|
+| 19 | SSH key 后门 (authorized_keys command=) | 0x13 |
+| 20 | BASH 后门 (内置同名/函数/trap) | 0x09/0x10/0x34 |
+| 21 | motd 后门 | 0x24 |
+| 22 | TCP Wrappers 后门 | 0x36 |
+| 23 | udev 规则后门 | 0x38 |
+| 24 | Python .pth 后门 | 0x39 |
+| 25 | PAM 后门 | 0x32 |
+| 26 | 家目录模板投毒 (/etc/skel) | 0x35 |
+| 27 | 系统安全配置 (ptrace_scope/ASLR/iptables) | 0x18/0x19/0x21 |
+| 28 | 软件完整性 (rpm -Va / debsums) | 0x26 |
+| 29 | 内核模块签名 | 0x30/0x31 |
+| 30 | GPG 密钥检查 | 0x28 |
+| 31 | deleted 进程文件 | 0x25 |
+| 32 | 隐藏进程 (proc vs ps) | 0x33 |
+| 33 | 运行服务检查 | 0x23 |
+| 34 | DNS 配置 + 环境变量 | 0x16/0x11 |
+| 35 | 隧道检测 (7 类 + bpftrace) | 隧道章节 |
+| 36 | 暴力破解 SSH (增强) | 0x02 |
+| 37 | 暴力破解其他服务 | 0x03-0x07 |
+
+### 📦 新增 lib/ 文件
+
+| 文件 | 用途 |
+|---|---|
+| `lib/suid_whitelist.txt` | Ubuntu/CentOS/Rocky 默认 SUID 清单 |
+| `lib/default_capabilities.txt` | 默认 capabilities 清单 |
+| `lib/suspicious_ports.txt` | 可疑端口列表 (外置) |
+| `lib/web_users.txt` | Web 服务用户列表 (外置) |
+| `lib/cron_keywords.txt` | 可疑 crontab 关键词 (外置) |
+| `lib/suspicious_services.txt` | 可疑 systemd 服务名 (外置) |
+| `lib/scan_tools.txt` | 横向扫描工具名 (外置) |
+| `lib/lateral_procs.txt` | 横向移动进程模式 (外置) |
+| `lib/suspicious_tlds.txt` | 可疑 TLD 列表 (外置) |
+| `lib/bpftrace_monitor.bt` | bpftrace 隧道监控脚本 |
+
+### 📊 Stats
+- 脚本:651 → 850 行 (+30%)
+- 模块:18 → 37 (+19)
+- lib/ 文件:8 → 19 (+11)
+- bats 测试:41 → 55+ (+14)
+- CLI flags:2 → 6 (+4)
+- 手册覆盖率:~25% → ~95% (+70%)
+
+---
+
 ## [v2.0] — 2026-07-07 — "GScan-Inspired Architecture"
 
 ### ⭐ Major Changes

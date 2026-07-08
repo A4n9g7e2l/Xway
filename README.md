@@ -1,13 +1,14 @@
 # XWAY IR — Linux 失陷主机一键应急排查
 
 > 🛡️ **蓝队应急响应 / Incident Response / Linux 主机取证**
-> v2.0 — 18 个排查模块 + 攻击路径时间线 + JSON-lines 日志 + IOC 外置 + Maltrail 数据源
+> v3.0 — 37 个检查模块 + 7 类隧道检测 + 6 类暴力破解 + 攻击路径时间线 + JSON-lines 日志
+> 基于 [NOP Team《Linux 应急响应手册 v2.0.2》](https://github.com/NOP-Team) 全量集成
 > 架构借鉴自 [grayddq/GScan](https://github.com/grayddq/GScan) (MIT)
 
 ![Language](https://img.shields.io/badge/language-Bash-4EAA25)
 ![Platform](https://img.shields.io/badge/platform-Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-v2.0-blueviolet)
+![Version](https://img.shields.io/badge/version-v3.0-blueviolet)
 ![Status](https://img.shields.io/badge/status-stable-success)
 ![Tests](https://img.shields.io/badge/tests-bats-4EAA25)
 ![CI](https://github.com/A4n9g7e2l/Xway/actions/workflows/ci.yml/badge.svg)

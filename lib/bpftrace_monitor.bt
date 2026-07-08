@@ -1,0 +1,50 @@
+#!/usr/bin/env bpftrace
+# xway_ir bpftrace 隧道监控脚本
+# 来源:NOP Team 应急响应手册 v2.0.2 隧道章节
+#
+# 用法:
+#   sudo bpftrace lib/bpftrace_monitor.bt <target_ip>
+#
+# 功能:
+#   监控所有对 <target_ip> 的网络请求,输出 pid/thread_id/comm
+#   用于定位隧道/后门进程
+#
+# 要求:
+#   - bpftrace 已安装 (apt install bpftrace / yum install bpftrace)
+#   - kernel >= 5.2
+#   - root 权限
+
+BEGIN
+{
+    printf("xway_ir 隧道监控启动 (Ctrl+C 退出)\n");
+    printf("目标 IP: %s\n", str($1));
+    printf("%-10s %-10s %-20s %-20s %s\n", "PID", "TID", "COMM", "SADDR", "DADDR");
+}
+
+// 监控 TCP 连接建立
+tracepoint:syscalls:sys_enter_connect
+/args->uservaddr->sa_family == AF_INET/
+{
+    $daddr = ntop(args->uservaddr->sin_addr.s_addr);
+    if ($daddr == str($1)) {
+        printf("[TCP] %-10d %-10d %-20s -> %s\n", pid, tid, comm, $daddr);
+    }
+}
+
+// 监控 UDP 发送
+tracepoint:syscalls:sys_enter_sendto
+{
+    // bpftrace 限制:无法直接从 sendto 参数提取目标 IP
+    // 此 tracepoint 仅记录 pid/comm,需配合 ss -antp 交叉比对
+}
+
+// 监控 DNS 查询 (通过 socket)
+tracepoint:syscalls:sys_enter_socket
+{
+    printf("[SOCKET] %-10d %-10d %-20s\n", pid, tid, comm);
+}
+
+END
+{
+    printf("\nxway_ir 隧道监控结束\n");
+}

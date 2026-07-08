@@ -1,0 +1,34 @@
+# xway_ir 可疑 TLD 列表
+# 用途:在 /etc/hosts 和 DNS 配置中匹配可疑顶级域
+# 用法:grep -F -f lib/suspicious_tlds.txt /etc/hosts
+
+.tk
+.top
+.xyz
+.gq
+.ml
+.cf
+.icu
+.work
+.cyou
+.su
+.onion
+.bid
+.click
+.country
+.date
+.download
+.faith
+.fit
+.gdn
+.kim
+.link
+.men
+.party
+.pw
+.review
+.racing
+.stream
+.trade
+.win
+.review

@@ -1,0 +1,15 @@
+# xway_ir 可疑 crontab 关键词
+# 用途:在 crontab / /etc/crontab / cron.d 中匹配
+# 用法:grep -E "$(tr '\n' '|' < lib/cron_keywords.txt)"
+
+wget
+curl
+base64
+nc /tmp/
+python -c
+perl -e
+bash -c
+/bin/sh
+/dev/tcp/
+chmod +x
+nohup

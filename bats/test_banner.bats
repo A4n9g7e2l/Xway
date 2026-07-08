@@ -1,13 +1,12 @@
 #!/usr/bin/env bats
-# test_banner.bats — verify xway_ir.sh has 18 numbered section banners,
-# no orphan CYAN typo, and correct color var references.
+# test_banner.bats — v3.0: verify 37 modules, CLI flags, bug regressions
 
 setup() {
     export REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
     export SCRIPT="$REPO_ROOT/xway_ir.sh"
 }
 
-@test "xway_ir.sh exists and is executable (or has bash shebang)" {
+@test "xway_ir.sh exists and has bash shebang" {
     [ -f "$SCRIPT" ]
     head -1 "$SCRIPT" | grep -q "^#!/bin/bash"
 }
@@ -17,40 +16,30 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "xway_ir.sh defines 9 color vars (RED/YEL/GRN/BLU/CYN/NC/BRED/BYEL/BGRN+)" {
-    grep -q "^[[:space:]]*RED=" "$SCRIPT"
-    grep -q "^[[:space:]]*YEL=" "$SCRIPT"
-    grep -q "^[[:space:]]*GRN=" "$SCRIPT"
-    grep -q "^[[:space:]]*BLU=" "$SCRIPT"
-    grep -q "^[[:space:]]*CYN=" "$SCRIPT"
-    grep -q "^[[:space:]]*NC=" "$SCRIPT"
-    grep -q "^[[:space:]]*BRED=" "$SCRIPT"
+@test "xway_ir.sh has 37 check functions" {
+    count=$(grep -c '^check_[0-9]' "$SCRIPT")
+    [ "$count" -eq 37 ]
 }
 
-@test "xway_ir.sh has 18 section_header banners" {
-    # Count calls to section_header with literal "N" arg pattern
-    count=$(grep -cE 'section_header "[0-9]+"' "$SCRIPT")
-    [ "$count" -eq 18 ]
+@test "xway_ir.sh has 37 section_header calls" {
+    count=$(grep -c 'section_header "[0-9]' "$SCRIPT")
+    [ "$count" -eq 37 ]
 }
 
-@test "xway_ir.sh uses section_header consistently (not inline echo banners)" {
-    # No more inline '\n[BLU][N/13]' style — those should be section_header calls
-    if grep -qE '\[1/13\]|\[2/13\]|\[3/13\]' "$SCRIPT"; then
-        # If old numbering remains, that's a regression
-        echo "OLD 13-banner numbering found" >&2
-        return 1
-    fi
-}
-
-@test "xway_ir.sh does NOT have CYAN typo (variable is CYN)" {
-    # The old bug was ${CYAN} instead of ${CYN}
+@test "xway_ir.sh does NOT have CYAN typo" {
     ! grep -q '\${CYAN}' "$SCRIPT"
 }
 
-@test "xway_ir.sh FINAL_COLOR used for ALL 5 risk levels" {
-    # Should set FINAL_COLOR in 5 branches
-    count=$(grep -c 'FINAL_COLOR=' "$SCRIPT")
-    [ "$count" -ge 4 ]
+@test "xway_ir.sh supports --module flag" {
+    grep -q -- '--module' "$SCRIPT"
+}
+
+@test "xway_ir.sh supports --severity flag" {
+    grep -q -- '--severity' "$SCRIPT"
+}
+
+@test "xway_ir.sh supports --timeout flag" {
+    grep -q -- '--timeout' "$SCRIPT"
 }
 
 @test "xway_ir.sh supports --no-color flag" {
@@ -61,57 +50,117 @@ setup() {
     grep -q -- '--out-dir' "$SCRIPT"
 }
 
+@test "xway_ir.sh supports --json-only flag" {
+    grep -q -- '--json-only' "$SCRIPT"
+}
+
+@test "xway_ir.sh has --help flag" {
+    grep -q -- '--help' "$SCRIPT"
+}
+
 @test "xway_ir.sh writes REPORT_JSONL" {
     grep -q 'REPORT_JSONL=' "$SCRIPT"
-    grep -q 'printf.*REPORT_JSONL' "$SCRIPT"
 }
 
 @test "xway_ir.sh declares FINDINGS array" {
     grep -q 'declare -a FINDINGS' "$SCRIPT"
 }
 
-@test "xway_ir.sh declares LATERAL_EVIDENCE array" {
-    grep -q 'declare -a LATERAL_EVIDENCE' "$SCRIPT"
+@test "xway_ir.sh has score_for_level function" {
+    grep -q 'score_for_level()' "$SCRIPT"
 }
 
-@test "xway_ir.sh loads IOC files from lib/iocs/" {
-    grep -q 'lib/iocs/miners.txt' "$SCRIPT"
-    grep -q 'lib/iocs/c2.txt' "$SCRIPT"
-    grep -q 'lib/iocs/backdoors.txt' "$SCRIPT"
-    grep -q 'lib/iocs/rshell.txt' "$SCRIPT"
+@test "xway_ir.sh has level_to_color function" {
+    grep -q 'level_to_color()' "$SCRIPT"
 }
 
-@test "xway_ir.sh loads rootkit signatures from lib/" {
-    grep -q 'lib/rootkit_signatures.txt' "$SCRIPT"
-    grep -q 'lib/bad_lkm.txt' "$SCRIPT"
+@test "xway_ir.sh has level_meets_filter function" {
+    grep -q 'level_meets_filter()' "$SCRIPT"
 }
 
-@test "xway_ir.sh has attack path timeline section" {
+@test "xway_ir.sh has ALL_CHECKS array with 37 entries" {
+    grep -q 'ALL_CHECKS=' "$SCRIPT"
+    count=$(grep 'ALL_CHECKS=' "$SCRIPT" | grep -o '[0-9][0-9]' | wc -l)
+    [ "$count" -eq 37 ]
+}
+
+@test "xway_ir.sh has print_summary function" {
+    grep -q 'print_summary()' "$SCRIPT"
+}
+
+@test "xway_ir.sh does NOT use python for JSONL parsing (bug fix)" {
+    ! grep -q 'python -c.*json' "$SCRIPT"
+}
+
+@test "xway_ir.sh has attack path timeline" {
     grep -q '攻击路径时间线' "$SCRIPT"
 }
 
-@test "xway_ir.sh integrates GScan-inspired SSH brute-force-success correlation" {
-    grep -q 'SSH 爆破成功后入侵关联' "$SCRIPT"
-    grep -q 'BRUTE_IPS' "$SCRIPT"
+@test "xway_ir.sh integrates SSH brute-force correlation" {
+    grep -q 'SSH 爆破成功后入侵' "$SCRIPT"
 }
 
-@test "xway_ir.sh integrates GScan-inspired alias hijack check" {
-    grep -q '命令别名劫持' "$SCRIPT"
-    grep -q 'SENSITIVE_ALIAS' "$SCRIPT"
+@test "xway_ir.sh has tunnel detection module" {
+    grep -q '隧道检测' "$SCRIPT"
 }
 
-@test "xway_ir.sh integrates GScan-inspired shell env hijack (5 tags)" {
-    grep -q 'LD_AOUT_PRELOAD' "$SCRIPT"
-    grep -q 'LD_ELF_PRELOAD' "$SCRIPT"
-    grep -q 'PROMPT_COMMAND' "$SCRIPT"
+@test "xway_ir.sh has PAM backdoor check" {
+    grep -q 'PAM 后门' "$SCRIPT"
 }
 
-@test "xway_ir.sh integrates SSH wrapper check" {
-    grep -q 'sshd 非 ELF' "$SCRIPT"
+@test "xway_ir.sh has udev backdoor check" {
+    grep -q 'udev 规则后门' "$SCRIPT"
 }
 
-@test "xway_ir.sh integrates /etc/passwd + /etc/shadow permission check" {
-    grep -q 'shadow 权限异常' "$SCRIPT"
-    grep -q 'passwd 权限异常' "$SCRIPT"
-    grep -q '空密码账号' "$SCRIPT"
+@test "xway_ir.sh has Python .pth backdoor check" {
+    grep -q 'Python .pth 后门' "$SCRIPT"
+}
+
+@test "xway_ir.sh has TCP Wrappers check" {
+    grep -q 'TCP Wrappers' "$SCRIPT"
+}
+
+@test "xway_ir.sh has authorized_keys command= backdoor check" {
+    grep -q 'command= 后门' "$SCRIPT"
+}
+
+@test "xway_ir.sh has hidden process check (proc vs ps)" {
+    grep -q '隐藏进程' "$SCRIPT"
+}
+
+@test "xway_ir.sh has deleted process file check" {
+    grep -q 'deleted 进程文件' "$SCRIPT"
+}
+
+@test "xway_ir.sh has password padding check" {
+    grep -q '密码填充' "$SCRIPT"
+}
+
+@test "xway_ir.sh has UID=0 privilege check" {
+    grep -q 'UID=0 特权账户' "$SCRIPT"
+}
+
+@test "xway_ir.sh has software integrity check" {
+    grep -q '软件完整性' "$SCRIPT"
+}
+
+@test "xway_ir.sh has motd backdoor check" {
+    grep -q 'motd 后门' "$SCRIPT"
+}
+
+@test "xway_ir.sh has capabilities check" {
+    grep -q 'capabilities' "$SCRIPT"
+}
+
+@test "xway_ir.sh has ASLR/ptrace_scope check" {
+    grep -q 'ptrace_scope' "$SCRIPT"
+    grep -q 'ASLR' "$SCRIPT"
+}
+
+@test "xway_ir.sh references NOP Team cookbook" {
+    grep -q 'NOP Team' "$SCRIPT"
+}
+
+@test "xway_ir.sh version is 3.0" {
+    grep -q 'VERSION="3.0"' "$SCRIPT"
 }

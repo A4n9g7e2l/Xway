@@ -1,0 +1,14 @@
+# xway_ir 可疑 systemd 服务名关键词
+# 用途:在 systemctl list-unit-files --state=enabled 中匹配
+# 用法:grep -E "$(tr '\n' '|' < lib/suspicious_services.txt)"
+
+miner
+backdoor
+shell
+update-agent
+sys-update
+sysguard
+kworker
+ksoftirq
+network-service
+config-service

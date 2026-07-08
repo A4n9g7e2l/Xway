@@ -1,0 +1,16 @@
+# xway_ir Web 服务用户列表
+# 用途:检测 Web 进程派生 Shell(RCE)
+# 用法:ps auxww | grep -E "$(tr '\n' '|' < lib/web_users.txt)"
+
+www-data
+apache
+nobody
+nginx
+httpd
+mysql
+tomcat
+glassfish
+wildfly
+jboss
+gunicorn
+node

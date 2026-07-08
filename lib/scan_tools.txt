@@ -1,0 +1,20 @@
+# xway_ir 横向扫描工具名
+# 用途:find / -name <tool> 排除系统路径
+# 用法:逐行 for p in $(cat lib/scan_tools.txt)
+
+nmap
+masscan
+hydra
+medusa
+zmap
+rustscan
+dirb
+dirbuster
+gobuster
+ffuf
+wfuzz
+sqlmap
+nikto
+whatweb
+wpscan
+nuclei

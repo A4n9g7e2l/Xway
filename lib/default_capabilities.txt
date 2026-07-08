@@ -1,0 +1,20 @@
+# xway_ir 默认 capabilities 清单
+# 来源:NOP Team 手册 0x20 + Ubuntu/CentOS 默认值
+# 用途:getcap -r / 的结果与此对照,不在清单中的为可疑
+# 备注:capabilities 依赖包和环境,仅做参考
+
+# 常见合法 capabilities(非默认但合理)
+/usr/bin/ping: cap_net_raw
+/usr/bin/ping6: cap_net_raw
+/usr/sbin/arping: cap_net_raw
+/usr/sbin/clockdiff: cap_net_raw
+/usr/bin/mtr: cap_net_raw
+/usr/bin/traceroute: cap_net_raw
+/usr/bin/traceroute6: cap_net_raw
+/usr/sbin/ntptrace: cap_net_raw
+/usr/bin/gnome-keyring-daemon: cap_ipc_lock
+/usr/sbin/pppd: cap_net_raw
+/usr/sbin/ntpdate: cap_net_raw,cap_sys_nice
+/usr/sbin/chronyd: cap_net_bind_service,cap_sys_time
+/usr/bin/newuidmap: cap_setuid,cap_setgid
+/usr/bin/newgidmap: cap_setgid
