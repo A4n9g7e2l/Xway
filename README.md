@@ -561,7 +561,7 @@ XWAY IR 是一个开源、免费、持续迭代的蓝队工具。我们会**每 
 ```
 MIT License
 
-Copyright (c) 2026 A4n9g7e2l
+Copyright (c) 2026 A4n9g7e2l And  S1xin
 ```
 
 详见 [LICENSE](LICENSE) 文件。IOC 库来源标注见 [lib/iocs/LICENSE.notice](lib/iocs/LICENSE.notice)。
