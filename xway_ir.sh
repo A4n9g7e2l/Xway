@@ -1,11 +1,11 @@
 #!/bin/bash
 # ============================================================
-# xway_ir.sh v3.0 — Linux 失陷主机一键应急排查
+# xway_ir.sh v3.1 — Linux 失陷主机一键应急排查
 # 基于 NOP Team《Linux 应急响应手册 v2.0.2》全量集成
 # 架构借鉴:grayddq/GScan (MIT) — 数据-逻辑分离、IOC 外置、
 #          JSON-lines 日志、攻击路径时间线
 #
-# 37 个检查模块 + 7 类隧道检测 + 6 类暴力破解日志分析
+# 45 个检查模块 + 7 类隧道检测 + 6 类暴力破解日志分析
 #
 # 用法:
 #   sudo bash xway_ir.sh                            # 全量扫描
@@ -18,7 +18,7 @@
 # ============================================================
 set +e
 
-VERSION="3.0"
+VERSION="3.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="${SCRIPT_DIR}/lib"
 IOC_DIR="${LIB_DIR}/iocs"
@@ -32,23 +32,31 @@ JSON_ONLY=0
 # -------- CLI 解析 --------
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --module) RUN_MODULES="$2"; shift 2 ;;
-        --severity) SEVERITY_FILTER="$2"; shift 2 ;;
-        --timeout) CHECK_TIMEOUT="$2"; shift 2 ;;
+        --module)
+            [[ "$2" =~ ^[0-9]+(,[0-9]+)*$ ]] || { echo "xway_ir: --module invalid: $2" >&2; exit 2; }
+            RUN_MODULES="$2"; shift 2 ;;
+        --severity)
+            [[ "$2" =~ ^(crit|high|med|low|info)(,(crit|high|med|low|info))*$ ]] || \
+                { echo "xway_ir: --severity invalid: $2 (valid: crit|high|med|low|info)" >&2; exit 2; }
+            SEVERITY_FILTER="$2"; shift 2 ;;
+        --timeout)
+            [[ "$2" =~ ^[0-9]+$ ]] || { echo "xway_ir: --timeout invalid: $2" >&2; exit 2; }
+            CHECK_TIMEOUT="$2"; shift 2 ;;
         --no-color) NO_COLOR=1; shift ;;
         --out-dir) OUT_DIR="$2"; shift 2 ;;
         --json-only) JSON_ONLY=1; shift ;;
         --help|-h)
-            echo "xway_ir.sh v${VERSION} — Linux 应急响应排查"
+            echo "xway_ir.sh v${VERSION} - Linux 应急响应排查"
             echo "用法: sudo bash xway_ir.sh [OPTIONS]"
             echo "  --module 1,3,10     只跑指定模块"
-            echo "  --severity crit,high 只显示指定级别"
+            echo "  --severity crit,high 只显示指定级别 (含更高级别)"
             echo "  --timeout 30        每检查限时秒数"
             echo "  --no-color          关闭 ANSI 颜色"
             echo "  --out-dir /tmp/ir   输出目录"
             echo "  --json-only         只输出 JSONL"
             exit 0 ;;
-        *) shift ;;
+        --) shift; break ;;
+        *) echo "xway_ir: unknown option: $1" >&2; exit 2 ;;
     esac
 done
 
@@ -96,22 +104,49 @@ level_to_color() {
         INFO) echo "$CYN" ;; *) echo "" ;;
     esac
 }
+# -------- severity filter (精确成员 + hierarchy: high 含 CRIT) --------
+# -------- severity filter (精确成员 + hierarchy: high 含 CRIT) --------
+# 语义: finding 级别数字 >= 过滤器级别数字 时满足 (CRIT=5 最严重, INFO=1 最轻)
+#   用户传 --severity high (f_num=4): 显示 CRIT(5>=4) + HIGH(4>=4), 不显示 MED(3<4)
+declare -a SF_ARR=()
+if [[ -n "$SEVERITY_FILTER" ]]; then
+    IFS=',' read -ra SF_ARR <<< "$SEVERITY_FILTER"
+fi
+declare -A SEV_HIER=([crit]=5 [high]=4 [med]=3 [low]=2 [info]=1)
 level_meets_filter() {
-    [[ -z "$SEVERITY_FILTER" ]] && return 0
-    local lvl="$1"
-    case "$lvl" in
-        CRIT) [[ "$SEVERITY_FILTER" == *crit* ]] ;;
-        HIGH) [[ "$SEVERITY_FILTER" == *high* ]] ;;
-        MED) [[ "$SEVERITY_FILTER" == *med* ]] ;;
-        LOW) [[ "$SEVERITY_FILTER" == *low* ]] ;;
-        INFO) [[ "$SEVERITY_FILTER" == *info* ]] ;;
-        *) return 0 ;;
-    esac
+    [[ ${#SF_ARR[@]} -eq 0 ]] && return 0
+    local lvl_lower="${1,,}"
+    local lvl_num=${SEV_HIER[$lvl_lower]:-1}
+    local f
+    for f in "${SF_ARR[@]}"; do
+        local f_num=${SEV_HIER[${f,,}]}
+        [[ -n "$f_num" && $lvl_num -ge $f_num ]] && return 0
+    done
+    return 1
+}
+
+# -------- sanitize / escape helpers (P0-2) --------
+# 删除控制字符 \000-\010 \013-\037 \177 (保留 \t \n \r 由 json_escape 处理)
+strip_ctl() { printf '%s' "$1" | tr -d '\000-\010\013-\037\177'; }
+# JSON 字符串转义: \ " 换行 回车 Tab (纯 bash 字符串替换,无 jq/awk 依赖)
+# ponytail: 用 bash 内置 ${var//pattern/replacement},比 awk gsub quoting 更稳
+json_escape() {
+    local s="${1//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
 }
 
 # -------- log_finding --------
 log_finding() {
-    local level="$1" mod="$2" title="$3" file="${4:-}" hint="${5:-}"
+    local level="$1" mod="$2"
+    # ponytail: 入口 sanitize,后续所有输出路径都干净
+    local title file hint
+    title=$(strip_ctl "$3")
+    file=$(strip_ctl "${4:-}")
+    hint=$(strip_ctl "${5:-}")
     local ts; ts=$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')
     local score; score=$(score_for_level "$level")
     TOTAL_SCORE=$((TOTAL_SCORE + score))
@@ -125,25 +160,29 @@ log_finding() {
             INFO) tag="[i] INFO" ;;
         esac
         printf '%b  %b%s%b %s\n' "$color" "$color" "$tag" "$NC" "$title" >&2
-        [[ -n "$file" ]] && printf '         %b→%b %s\n' "$CYN" "$NC" "$file" >&2
+        [[ -n "$file" ]] && printf '         %b->%b %s\n' "$CYN" "$NC" "$file" >&2
         [[ -n "$hint" ]] && printf '         %b↪%b %s\n' "$CYN" "$NC" "$hint" >&2
     fi
 
-    # 写 log
+    # 写 log (title 已 sanitize,无控制字符)
     { printf '%s  %s  %s\n' "[$level]" "$title" "$file"
       [[ -n "$hint" ]] && printf '         ↪ %s\n' "$hint"
     } >> "$REPORT_LOG" 2>/dev/null
 
-    # 写 JSONL
-    local title_esc="${title//\"/\\\"}" file_esc="${file//\"/\\\"}" hint_esc="${hint//\"/\\\"}"
+    # 写 JSONL (转义 \ " 换行 回车 Tab)
+    local title_esc file_esc hint_esc
+    title_esc=$(json_escape "$title")
+    file_esc=$(json_escape "$file")
+    hint_esc=$(json_escape "$hint")
     printf '{"ts":"%s","level":"%s","module":"%s","title":"%s","file":"%s","hint":"%s","score":%d}\n' \
         "$ts" "$level" "$mod" "$title_esc" "$file_esc" "$hint_esc" "$score" >> "$REPORT_JSONL" 2>/dev/null
 
-    # 时间线池
+    # 时间线池 (P0-4: 用 \x1f Unit Separator,防 file 含 | 错位)
     if [[ "$level" == "CRIT" || "$level" == "HIGH" || "$level" == "MED" ]]; then
         local mtime=""
         [[ -n "$file" && -e "$file" ]] && mtime=$(stat -c %y -- "$file" 2>/dev/null)
-        FINDINGS+=("${mtime:-$ts}|$level|$mod|$title|$file|$hint")
+        local US=$'\x1f'
+        FINDINGS+=("${mtime:-$ts}${US}${level}${US}${mod}${US}${title}${US}${file}${US}${hint}")
     fi
 }
 
@@ -151,10 +190,10 @@ log_finding() {
 section_header() {
     local n="$1" title="$2"
     if [[ $JSON_ONLY -eq 0 ]]; then
-        echo -e "\n${BLU}[$n/37]${NC} ${YEL}${title}${NC}" >&2
+        echo -e "\n${BLU}[$n/45]${NC} ${YEL}${title}${NC}" >&2
         echo -e "${CYN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}" >&2
     fi
-    { printf '\n[%s/37] %s\n' "$n" "$title"
+    { printf '\n[%s/45] %s\n' "$n" "$title"
       printf '──────────────────────────────────────────────────────────────────────\n'
     } >> "$REPORT_LOG" 2>/dev/null
 }
@@ -166,10 +205,13 @@ bar() {
 }
 
 # -------- IOC 文件加载辅助 --------
+# ponytail: 转义 regex 元字符后拼 alternation,防 IOC 文件中 . * ( | 等被当 regex 解释
 load_ioc_pattern() {
     local f="$1" max="${2:-100}"
     [[ -f "$f" ]] || return 1
-    grep -vE '^\s*$|^\s*#' "$f" 2>/dev/null | head -"$max" | tr '\n' '|' | sed 's/|$//'
+    grep -vE '^\s*$|^\s*#' "$f" 2>/dev/null | head -"$max" \
+      | awk '{gsub(/[][\\.()*+?{|^$]/, "\\\\&"); print}' \
+      | paste -sd'|' -
 }
 
 # ============================================================
@@ -190,7 +232,7 @@ EOF
     bar "─" 70 >&2
 fi
 { printf '╔══════════════════════════════════════════════════════════════════╗\n'
-  printf '║   XWAY 蓝队应急响应 v%s — 37 模块\n' "$VERSION"
+  printf '║   XWAY 蓝队应急响应 v%s — 45 模块\n' "$VERSION"
   printf '╚══════════════════════════════════════════════════════════════════╝\n'
   printf '主机: %s (%s) 内核: %s\n' "$HOST" "$IP" "$KERNEL"
   printf '扫描时间: %s\n' "$SCAN_TIME"
@@ -696,6 +738,178 @@ check_37() {
 }
 
 # ============================================================
+# 模块 38-45: v3.1 新增 (基于 9 本应急手册 gap 分析)
+# 来源:奇安信安服/深信服/实战笔记/冰蝎蚁剑手册
+# ============================================================
+check_38() {
+    section_header "38" "排查 Web 内存马 (access log)..."
+    local LOG_DIRS=(/var/log/nginx /var/log/apache2 /var/log/httpd /var/log/tomcat /var/log/tomcat9)
+    local HIT=""
+    for d in "${LOG_DIRS[@]}"; do
+        [[ -d "$d" ]] || continue
+        # 404->200 模式:同 URL 短时间内状态翻转
+        local M1; M1=$(find "$d" -type f \( -name '*access*' -o -name '*.log' \) 2>/dev/null | head -5 \
+          | xargs -r awk '{
+              url=$7; status=$9
+              key=url
+              if (last[key]==404 && status==200) print FILENAME": "url" 404->200"
+              last[key]=status
+          }' 2>/dev/null | head -3)
+        [[ -n "$M1" ]] && HIT+="${M1}"$'\n'
+        # POST 响应 16 字节对齐 (Behinder AES-128 块特征)
+        local M2; M2=$(find "$d" -type f \( -name '*access*' -o -name '*.log' \) 2>/dev/null | head -5 \
+          | xargs -r awk '$6 ~ /POST/ && $9==200 && $10>0 && $10%16==0 {print FILENAME": "$0}' 2>/dev/null | head -3)
+        [[ -n "$M2" ]] && HIT+="${M2}"$'\n'
+    done
+    [[ -n "$HIT" ]] && log_finding "CRIT" "webshell" "Web 内存马特征 (404->200 / AES 块对齐)" \
+        "$(echo "$HIT" | head -1)" "arthas 抓运行时类 / Tomcat Agent"
+}
+
+check_39() {
+    section_header "39" "排查 Webshell 工具流量 (Behinder/蚁剑)..."
+    [[ -f "$IOC_DIR/behinder_uas.txt" ]] || return
+    local PAT; PAT=$(load_ioc_pattern "$IOC_DIR/behinder_uas.txt" 30)
+    local HIT=""
+    for d in /var/log/nginx /var/log/apache2 /var/log/httpd /var/log/tomcat /var/log/tomcat9; do
+        [[ -d "$d" ]] || continue
+        local M; M=$(find "$d" -type f \( -name '*access*' -o -name '*.log' \) 2>/dev/null | head -10 \
+          | xargs -r grep -hE "$PAT" 2>/dev/null | head -3)
+        [[ -n "$M" ]] && HIT+="${M}"$'\n'
+    done
+    [[ -n "$HIT" ]] && log_finding "CRIT" "webshell" "Webshell 工具流量 (Behinder/蚁剑/Chopper UA)" \
+        "$(echo "$HIT" | head -1)" "提取 IP + 查 webshell 落点"
+}
+
+check_40() {
+    section_header "40" "排查网页暗链..."
+    [[ -f "$LIB_DIR/darklink_keywords.txt" ]] || return
+    local PAT; PAT=$(load_ioc_pattern "$LIB_DIR/darklink_keywords.txt" 30)
+    local WEB_ROOTS=(/var/www /usr/share/nginx/html /var/www/html /opt/lampp/htdocs /usr/local/tomcat/webapps)
+    local HIT=""
+    for r in "${WEB_ROOTS[@]}"; do
+        [[ -d "$r" ]] || continue
+        local M; M=$(find "$r" -xdev -type f \( -name '*.html' -o -name '*.js' -o -name '*.htm' \) 2>/dev/null | head -500 \
+          | xargs -r grep -lE "$PAT" 2>/dev/null | head -3)
+        [[ -n "$M" ]] && HIT+="${M}"$'\n'
+    done
+    # Nginx/Apache 配置劫持
+    local CFG_HIT; CFG_HIT=$(grep -rhE 'sub_filter|rewrite\s+.+\s+http' \
+        /etc/nginx/ /etc/apache2/ /etc/httpd/ 2>/dev/null \
+        | grep -vE '^\s*#' | head -3)
+    [[ -n "$CFG_HIT" ]] && HIT+="config: ${CFG_HIT}"$'\n'
+    [[ -n "$HIT" ]] && log_finding "HIGH" "webshell" "网页暗链 (赌博/色情/UA劫持/Nginx sub_filter)" \
+        "$(echo "$HIT" | head -1)" "逐个 cat 查看 + 删暗链"
+}
+
+check_41() {
+    section_header "41" "排查数据库 SQLi 痕迹..."
+    [[ -f "$LIB_DIR/sqli_patterns.txt" ]] || return
+    local PAT; PAT=$(load_ioc_pattern "$LIB_DIR/sqli_patterns.txt" 30)
+    local HIT=""
+    # MySQL history + log
+    local f
+    for f in /root/.mysql_history /home/*/.mysql_history; do
+        [[ -f "$f" ]] || continue
+        local M; M=$(grep -hE "$PAT" "$f" 2>/dev/null | head -3)
+        [[ -n "$M" ]] && HIT+="mysql_history ${f}: ${M}"$'\n'
+    done
+    for f in /var/log/mysql/*.log /var/log/mariadb/*.log; do
+        [[ -f "$f" ]] || continue
+        local M; M=$(grep -hE "$PAT" "$f" 2>/dev/null | head -3)
+        [[ -n "$M" ]] && HIT+="mysql_log ${f}: ${M}"$'\n'
+    done
+    # PostgreSQL
+    for f in /var/log/postgresql/*.log; do
+        [[ -f "$f" ]] || continue
+        local M; M=$(grep -hE "$PAT" "$f" 2>/dev/null | head -3)
+        [[ -n "$M" ]] && HIT+="pgsql ${f}: ${M}"$'\n'
+    done
+    [[ -n "$HIT" ]] && log_finding "HIGH" "sqli" "数据库 SQLi 痕迹 (union/sleep/load_file)" \
+        "$(echo "$HIT" | head -1)" "查来源 IP + 修复注入点"
+}
+
+check_42() {
+    section_header "42" "排查文件系统异常..."
+    # 1. 无主/无组 (攻击者账号被删后残留)
+    local NOOWNER; NOOWNER=$(find / -xdev \( -nouser -o -nogroup \) -type f 2>/dev/null | head -5)
+    [[ -n "$NOOWNER" ]] && log_finding "HIGH" "file" "无主/无组文件 (攻击者账号已删)" \
+        "$(echo "$NOOWNER" | head -1)" "find -nouser 溯源"
+    # 2. 777 可执行文件
+    local WWX; WWX=$(find / -xdev -type f -perm -002 -executable 2>/dev/null \
+        | grep -vE '^/(proc|sys|dev/pts)' | head -5)
+    [[ -n "$WWX" ]] && log_finding "HIGH" "file" "777 可执行文件 (异常权限)" \
+        "$(echo "$WWX" | head -1)" "chmod o-w"
+    # 3. 欺骗性文件名 (... / .. / . / 空格)
+    local DECEIT; DECEIT=$(find /tmp /var/tmp /dev/shm /etc /usr/bin /usr/sbin /usr/local/bin \
+        -xdev \( -name '...' -o -name '.. ' -o -name '. ' -o -name ' ' \) 2>/dev/null | head -5)
+    [[ -n "$DECEIT" ]] && log_finding "CRIT" "file" "欺骗性文件名 (../.../空格)" \
+        "$(echo "$DECEIT" | head -1)" "ls -la 查内容 + 删"
+    # 4. 临时目录大文件 (>10M,挖矿/打包数据)
+    local BIG; BIG=$(find /tmp /var/tmp /dev/shm -xdev -type f -size +10M 2>/dev/null | head -5)
+    [[ -n "$BIG" ]] && log_finding "MED" "file" "临时目录大文件 (>10M, 挖矿/打包)" \
+        "$(echo "$BIG" | head -1)" "file + strings 查类型"
+}
+
+check_43() {
+    section_header "43" "排查 SSH 软连接后门 (PAM pam_rootok)..."
+    local HIT=""
+    # 1. 监听进程 argv[0] 是 su/chsh/chfn 但 exe 是 sshd
+    local SSHD_PIDS; SSHD_PIDS=$(pgrep -x sshd 2>/dev/null)
+    local pid
+    for pid in $SSHD_PIDS; do
+        local cmdline exe
+        cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
+        exe=$(readlink /proc/$pid/exe 2>/dev/null)
+        if [[ "$exe" == */sshd ]] && echo "$cmdline" | grep -qE '\b(su|chsh|chfn)\b'; then
+            HIT+="PID $pid: $cmdline (exe=$exe)"$'\n'
+        fi
+    done
+    # 2. 任何指向 sshd 的软连接
+    local SYM; SYM=$(find / -xdev -lname '*sshd*' -type l 2>/dev/null \
+        | grep -vE '^/(proc|sys)' | head -5)
+    [[ -n "$SYM" ]] && HIT+="symlinks: ${SYM}"$'\n'
+    [[ -n "$HIT" ]] && log_finding "CRIT" "backdoor" "SSH 软连接后门 (pam_rootok 劫持)" \
+        "$(echo "$HIT" | head -1)" "rm 软连接 + kill 进程"
+}
+
+check_44() {
+    section_header "44" "排查 strace 凭据捕获注入..."
+    local HIT; HIT=$(grep -rhE 'strace.*-o[[:space:]]+[^[:space:]]+\.(log|txt).*\b(ssh|su|sudo|passwd)\b' \
+        /etc/bashrc /etc/bash.bashrc /etc/profile /etc/profile.d/ \
+        /root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile 2>/dev/null \
+        | grep -vE '^\s*#' | head -3)
+    [[ -n "$HIT" ]] && log_finding "CRIT" "backdoor" "strace 凭据捕获注入" \
+        "$(echo "$HIT" | head -1)" "删 strace 行 + 查 /tmp/*.log 已记录密码"
+}
+
+check_45() {
+    section_header "45" "排查登录痕迹聚合..."
+    # 1. lastb 失败登录 Top IP
+    if command -v lastb &>/dev/null; then
+        local FAIL; FAIL=$(lastb -awF 2>/dev/null | awk 'NF>=3{print $1,$3}' | sort | uniq -c | sort -rn | head -5)
+        [[ -n "$FAIL" ]] && log_finding "MED" "login" "失败登录 Top IP (lastb)" \
+            "$(echo "$FAIL" | head -1)" "封禁 Top IP"
+    fi
+    # 2. last 近期成功登录
+    if command -v last &>/dev/null; then
+        local SUCC; SUCC=$(last -awF 2>/dev/null | grep -vE '^(reboot|wtmp)' | head -10)
+        [[ -n "$SUCC" ]] && log_finding "LOW" "login" "近期成功登录 (last)" \
+            "$(echo "$SUCC" | head -1)" "复查来源 IP"
+    fi
+    # 3. useradd/userdel/usermod 痕迹
+    local ACCT; ACCT=$(grep -hE 'useradd|userdel|usermod' \
+        /var/log/secure /var/log/auth.log /var/log/messages 2>/dev/null | tail -10)
+    [[ -n "$ACCT" ]] && log_finding "MED" "login" "账号变更痕迹 (useradd/userdel/usermod)" \
+        "$(echo "$ACCT" | head -1)" "复查变更是否合法"
+    # 4. lastlog 非空账号
+    if command -v lastlog &>/dev/null; then
+        local LL; LL=$(lastlog 2>/dev/null | grep -v 'Never' | head -10)
+        [[ -n "$LL" ]] && log_finding "LOW" "login" "登录过的账号 (lastlog)" \
+            "$(echo "$LL" | head -1)" "复查非默认账号"
+    fi
+}
+
+# ============================================================
 # 综合结论
 # ============================================================
 print_summary() {
@@ -767,18 +981,18 @@ print_summary() {
     # 攻击路径时间线
     echo "" >&2
     bar "═" 70 >&2
-    printf '%b          🛡️  攻击路径时间线 (v3.0)%b\n' "$RED" "$NC" >&2
+    printf '%b          🛡️  攻击路径时间线 (v3.1)%b\n' "$RED" "$NC" >&2
     bar "═" 70 >&2
     echo "" >&2
     if [ ${#FINDINGS[@]} -eq 0 ]; then
         printf '  %b✅ 无 CRIT/HIGH/MED 发现,无可构建时间线%b\n' "$GRN" "$NC" >&2
     else
         printf '%b  发现 %d 条事件,按时间排序:%b\n\n' "$YEL" "${#FINDINGS[@]}" "$NC" >&2
-        local TIMELINE; TIMELINE=$(printf '%s\n' "${FINDINGS[@]}" | grep -v '^|' | sort)
-        local NO_TS; NO_TS=$(printf '%s\n' "${FINDINGS[@]}" | grep '^|')
-        local SORTED; SORTED=$(printf '%s\n%s' "$TIMELINE" "$NO_TS" | grep -v '^$')
+        # ponytail: FINDINGS 用 \x1f 分隔,sort 直接按整行字典序 (LC_ALL=C 保证稳定)
+        local SORTED
+        SORTED=$(printf '%s\n' "${FINDINGS[@]}" | LC_ALL=C sort)
         local i=0
-        while IFS='|' read -r ts level mod title file hint; do
+        while IFS=$'\x1f' read -r ts level mod title file hint; do
             i=$((i+1))
             [[ -z "$ts" ]] && ts="未知时间"
             local ts_short; ts_short=$(echo "$ts" | cut -c1-16)
@@ -787,7 +1001,7 @@ print_summary() {
             case "$level" in CRIT) tag="🔴" ;; HIGH) tag="🟠" ;; MED) tag="🟡" ;; *) tag="⚪" ;; esac
             printf '  %b[%d]%b %b%s%b %b%s%b\n' "$CYN" "$i" "$NC" "$color" "$ts_short" "$NC" "$color" "$level" "$NC" >&2
             printf '      %s\n' "$title" >&2
-            [[ -n "$file" ]] && printf '      %b→%b %s\n' "$CYN" "$NC" "$file" >&2
+            [[ -n "$file" ]] && printf '      %b->%b %s\n' "$CYN" "$NC" "$file" >&2
             [[ -n "$hint" ]] && printf '      %b↪%b %s\n' "$CYN" "$NC" "$hint" >&2
         done <<< "$SORTED"
     fi
@@ -823,7 +1037,7 @@ print_summary() {
 # ============================================================
 # Main Dispatch
 # ============================================================
-ALL_CHECKS=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37)
+ALL_CHECKS=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45)
 
 if [[ -n "$RUN_MODULES" ]]; then
     RUN_CHECKS=()

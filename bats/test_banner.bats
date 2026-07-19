@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# test_banner.bats — v3.0: verify 37 modules, CLI flags, bug regressions
+# test_banner.bats — v3.1: verify 45 modules, CLI flags, bug regressions
 
 setup() {
     export REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
@@ -16,14 +16,14 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "xway_ir.sh has 37 check functions" {
+@test "xway_ir.sh has 45 check functions" {
     count=$(grep -c '^check_[0-9]' "$SCRIPT")
-    [ "$count" -eq 37 ]
+    [ "$count" -eq 45 ]
 }
 
-@test "xway_ir.sh has 37 section_header calls" {
+@test "xway_ir.sh has 45 section_header calls" {
     count=$(grep -c 'section_header "[0-9]' "$SCRIPT")
-    [ "$count" -eq 37 ]
+    [ "$count" -eq 45 ]
 }
 
 @test "xway_ir.sh does NOT have CYAN typo" {
@@ -78,10 +78,10 @@ setup() {
     grep -q 'level_meets_filter()' "$SCRIPT"
 }
 
-@test "xway_ir.sh has ALL_CHECKS array with 37 entries" {
+@test "xway_ir.sh has ALL_CHECKS array with 45 entries" {
     grep -q 'ALL_CHECKS=' "$SCRIPT"
     count=$(grep 'ALL_CHECKS=' "$SCRIPT" | grep -o '[0-9][0-9]' | wc -l)
-    [ "$count" -eq 37 ]
+    [ "$count" -eq 45 ]
 }
 
 @test "xway_ir.sh has print_summary function" {
@@ -161,6 +161,40 @@ setup() {
     grep -q 'NOP Team' "$SCRIPT"
 }
 
-@test "xway_ir.sh version is 3.0" {
-    grep -q 'VERSION="3.0"' "$SCRIPT"
+@test "xway_ir.sh version is 3.1" {
+    grep -q 'VERSION="3.1"' "$SCRIPT"
+}
+
+# ---------- v3.1 新增模块名 grep ----------
+
+@test "xway_ir.sh has Web 内存马 check (v3.1)" {
+    grep -q 'Web 内存马' "$SCRIPT"
+}
+
+@test "xway_ir.sh has Webshell 工具流量 check (v3.1)" {
+    grep -q 'Webshell 工具流量' "$SCRIPT"
+}
+
+@test "xway_ir.sh has 网页暗链 check (v3.1)" {
+    grep -q '网页暗链' "$SCRIPT"
+}
+
+@test "xway_ir.sh has 数据库 SQLi 痕迹 check (v3.1)" {
+    grep -q '数据库 SQLi' "$SCRIPT"
+}
+
+@test "xway_ir.sh has 文件系统异常 check (v3.1)" {
+    grep -q '文件系统异常' "$SCRIPT"
+}
+
+@test "xway_ir.sh has SSH 软连接后门 check (v3.1)" {
+    grep -q 'SSH 软连接后门' "$SCRIPT"
+}
+
+@test "xway_ir.sh has strace 凭据捕获注入 check (v3.1)" {
+    grep -q 'strace 凭据捕获注入' "$SCRIPT"
+}
+
+@test "xway_ir.sh has 登录痕迹聚合 check (v3.1)" {
+    grep -q '登录痕迹聚合' "$SCRIPT"
 }

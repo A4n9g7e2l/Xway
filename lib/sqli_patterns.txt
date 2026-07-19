@@ -1,0 +1,48 @@
+# xway_ir SQLi / NoSQLi 特征模式
+# 来源:OWASP + 《网络安全事件应急指南》§SQL注入 + 实战案例
+# 用法:grep -hE "$(load_ioc_pattern lib/sqli_patterns.txt)" ~/.mysql_history /var/log/mysql/*.log
+# 备注:这些是 grep -E (extended regex) 模式,load_ioc_pattern 会转义元字符
+
+# --- SQL 注入 ---
+union\s+select
+union\s+all\s+select
+information_schema
+sleep\(
+benchmark\(
+load_file
+into\s+outfile
+into\s+dumpfile
+xp_cmdshell
+0x[0-9a-f]{8,}
+0x[0-9a-f]{16,}
+convert\(int
+cast\(.*as
+exec\s*\(
+sp_executesql
+@@version
+@@datadir
+@@hostname
+user\(\)
+database\(\)
+version\(\)
+
+# --- 盲注特征 ---
+if\(.*=
+case\s+when
+substr\(
+substring\(
+mid\(
+ord\(
+
+# --- NoSQL 注入 ---
+\$where
+this\.
+mongotemplate
+\$ne
+\$gt
+\$regex
+
+# --- 文件读取/写入 ---
+/etc/passwd
+/etc/shadow
+/etc/hosts

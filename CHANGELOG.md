@@ -5,6 +5,66 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+---
+
+## [v3.1] - 2026-07-19 - "9 本应急手册 gap 分析 + P0 bug 修复"
+
+### ⭐ Major Changes
+
+#### 基于 9 本新应急手册的 gap 分析,新增 8 个检查模块
+资料来源:
+- 奇安信安服团队《网络安全应急响应技术实战指南》
+- 《网络安全事件应急指南》(深信服)
+- 《应急响应实战笔记 2020》
+- 《Linux 应急响应流程及实战演练》
+- 《应急响应 溯源分析》
+- 《冰蝎、蚁剑过流量监控改造及红队经典案例分享》
+
+新增模块:
+- **check_38**: Web access log 内存马检测 (404->200 状态翻转 / POST 响应 16 字节 AES 块对齐)
+- **check_39**: Behinder/蚁剑/Chopper/Godzilla Webshell 工具流量 (UA 库匹配)
+- **check_40**: 网页暗链 (赌博/色情/JS 劫持/Nginx sub_filter 配置劫持)
+- **check_41**: 数据库 SQLi 痕迹 (MySQL/PostgreSQL 日志 + mysql_history,union/sleep/load_file)
+- **check_42**: 文件系统异常 (无主/无组 + 777 可执行 + 欺骗性文件名 + 临时目录大文件)
+- **check_43**: SSH 软连接后门 (PAM pam_rootok 劫持,argv[0]=su/chsh/chfn + -lname sshd)
+- **check_44**: strace 凭据捕获注入 (bashrc/profile 中 strace -o + ssh/su/sudo/passwd)
+- **check_45**: 登录痕迹聚合 (lastb Top IP + last 成功 + useradd/userdel + lastlog)
+
+#### 4 个 P0 bug 修复 (与新模块相关,避免新模块踩同样的坑)
+- **C1: `--severity` 子串匹配改精确成员比对 + hierarchy**
+  - 旧:`[[ "$SEVERITY_FILTER" == *crit* ]]` 会误匹配 `critical`/`critlow`
+  - 新:`IFS=',' read -ra SF_ARR` + `SEV_HIER` 查表,`--severity high` 自动包含 CRIT
+  - 附带:CLI `--severity` / `--module` / `--timeout` 入参正则校验,非法值 exit 2
+- **C2: JSONL 字符串转义补全 + ANSI 控制字符 sanitize**
+  - 旧:只转义 `"`,漏 `\`/换行/控制字符,攻击者控的 hostname 含 `[2J` 污染 SIEM
+  - 新:加 `strip_ctl()`(tr -d 控制字符)+ `json_escape()`(awk 转义 \ " 
+  	)
+  - log_finding 入口对 title/file/hint 调用 strip_ctl,所有输出路径都干净
+- **C3: `load_ioc_pattern` 转义 regex 元字符**
+  - 旧:IOC 文件含 `.*`/`(`/`|` 会让 grep 退化成 regex,误报满屏
+  - 新:awk 转义 `[][.\()*+?{|^$]` 后用 `paste -sd'|'` 拼 alternation
+- **H3+P0-4: FINDINGS 分隔符 `|` 改 `` (Unit Separator)**
+  - 旧:title/file/hint 含 `|` 时 `while IFS='|' read` 列错位(bash_history `echo a | nc` 必触发)
+  - 新:用 ASCII Unit Separator ``,timeline 排序加 `LC_ALL=C sort` 保证 locale 稳定
+
+### 📁 新增 lib IOC 文件 (3 个)
+- `lib/iocs/behinder_uas.txt`: Webshell 工具 UA 库 (Behinder/antSword/Chopper/Cknife/Godzilla/天蝎)
+- `lib/darklink_keywords.txt`: 网页暗链关键词 (赌博/色情/JS 劫持/UA 劫持/Nginx 配置劫持)
+- `lib/sqli_patterns.txt`: SQLi/NoSQLi 特征模式 (union/sleep/load_file/xp_cmdshell/$where)
+
+### 🧪 测试
+- 新增 `bats/test_p0_fixes.bats` (15 条,验证 4 个 P0 修复回归)
+- 新增 `bats/test_new_modules.bats` (35 条,验证 8 个新模块 + 3 个新 lib 文件)
+- 更新 `bats/test_banner.bats` (37 -> 45 模块,加 8 条新模块名 grep)
+
+### 🙏 致谢
+- 奇安信安服团队《网络安全应急响应技术实战指南》
+- 深信服《网络安全事件应急指南》
+- 《应急响应实战笔记 2020》
+- 《Linux 应急响应流程及实战演练》
+- 《应急响应 溯源分析》
+- 《冰蝎、蚁剑过流量监控改造及红队经典案例分享》
+
 ## [v3.0] — 2026-07-08 — "NOP Team 应急响应手册全量集成"
 
 ### ⭐ Major Changes

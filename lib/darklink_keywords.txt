@@ -1,0 +1,51 @@
+# xway_ir 网页暗链关键词
+# 来源:《网络安全事件应急指南》§网页暗链场景 + 实战案例
+# 用法:grep -lE "$(load_ioc_pattern lib/darklink_keywords.txt)" /var/www/**/*.html
+# 备注:暗链分 5 类 - JS/UA-Header/Nginx配置/IIS模块/静态HTML,本文件覆盖前 3 类
+
+# --- 赌博/博彩 ---
+博彩
+赌博
+六合彩
+澳门
+威尼斯人
+mg437
+皇冠现金
+足球投注
+体育投注
+bet365
+ag娱乐
+老虎机
+棋牌游戏
+
+# --- 色情 ---
+色情
+AV女优
+成人电影
+一夜情
+约炮
+裸聊
+
+# --- 政治敏感 (按需扩展) ---
+法轮功
+六四
+
+# --- JS 劫持特征 (location 跳转) ---
+location.href
+self.location
+window.location
+document.location
+top.location
+
+# --- UA 劫持关键词 (Nginx if $http_user_agent) ---
+baidu
+sogou
+bing
+googlebot
+iPhone
+iPad
+Android
+
+# --- Nginx/Apache 配置劫持关键词 ---
+sub_filter
+proxy_pass http
